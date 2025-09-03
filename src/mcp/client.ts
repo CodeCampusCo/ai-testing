@@ -1,25 +1,24 @@
-import { spawn, ChildProcess } from 'node:child_process';
-import { EventEmitter } from 'node:events';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import {
+  getDefaultEnvironment,
+  StdioClientTransport,
+} from '@modelcontextprotocol/sdk/client/stdio.js';
+import {
+  CallToolResultSchema,
+  ListToolsResultSchema,
+} from '@modelcontextprotocol/sdk/types.js';
 import { 
-  MCPMessage, 
-  MCPRequest, 
-  MCPResponse, 
+  MCPToolCallResult,
   MCPClientConfig 
 } from '../types/mcp.js';
 
-export class MCPClient extends EventEmitter {
-  private process: ChildProcess | null = null;
+export class MCPClient {
+  private client: Client | null = null;
+  private transport: StdioClientTransport | null = null;
   private isConnected = false;
-  private messageId = 0;
-  private pendingRequests = new Map<string, {
-    resolve: (value: MCPResponse) => void;
-    reject: (error: Error) => void;
-    timeout: NodeJS.Timeout;
-  }>();
 
   constructor(private config: MCPClientConfig) {
-    super();
-    this.setupErrorHandling();
+    // No need for EventEmitter inheritance
   }
 
   async connect(): Promise<void> {
@@ -27,156 +26,127 @@ export class MCPClient extends EventEmitter {
       return;
     }
 
-    return new Promise((resolve, reject) => {
-      try {
-        this.process = spawn(this.config.command, this.config.args, {
-          stdio: ['pipe', 'pipe', 'pipe']
-        });
+    try {
+      console.log(`Connecting to MCP server: ${this.config.command} ${this.config.args.join(' ')}`);
 
-        this.process.stdout?.on('data', (data) => {
-          this.handleMessage(data.toString());
-        });
+      // Create STDIO transport
+      this.transport = new StdioClientTransport({
+        command: this.config.command,
+        args: this.config.args,
+        env: {
+          ...getDefaultEnvironment(),
+        },
+        stderr: 'pipe',
+      });
 
-        this.process.stderr?.on('data', (data) => {
-          console.error('MCP Server Error:', data.toString());
-          this.emit('error', new Error(`MCP Server Error: ${data.toString()}`));
-        });
+      // Set up error handlers
+      this.transport.onerror = async (error: any) => {
+        console.error(`Transport error: ${error}`);
+        this.isConnected = false;
+      };
 
-        this.process.on('exit', (code) => {
-          this.isConnected = false;
-          this.emit('disconnect', code);
-        });
+      this.transport.onclose = async () => {
+        console.log('Transport connection closed');
+        this.isConnected = false;
+      };
 
-        this.process.on('error', (error) => {
-          this.emit('error', error);
-          reject(error);
-        });
+      // Create MCP client
+      this.client = new Client(
+        {
+          name: 'AI-Testing-Framework-Client',
+          version: '1.0.0',
+        },
+        {
+          capabilities: {
+            roots: {},
+            sampling: {},
+            elicitation: {},
+          },
+        }
+      );
 
-        // Wait for connection establishment
-        setTimeout(() => {
-          if (this.process && !this.process.killed) {
-            this.isConnected = true;
-            this.emit('connect');
-            resolve();
-          } else {
-            reject(new Error('Failed to start MCP server'));
-          }
-        }, 1000);
-
-      } catch (error) {
-        reject(error);
-      }
-    });
+      // Connect to the transport
+      await this.client.connect(this.transport);
+      this.isConnected = true;
+      console.log('Successfully connected to MCP server');
+    } catch (error) {
+      console.error('Failed to connect to MCP server:', error);
+      throw error;
+    }
   }
 
   async disconnect(): Promise<void> {
-    if (!this.isConnected || !this.process) {
-      return;
-    }
-
-    // Clear pending requests
-    for (const [id, request] of this.pendingRequests) {
-      clearTimeout(request.timeout);
-      request.reject(new Error('Connection closed'));
-    }
-    this.pendingRequests.clear();
-
-    return new Promise((resolve) => {
-      if (this.process) {
-        this.process.on('exit', () => {
-          this.isConnected = false;
-          this.process = null;
-          this.emit('disconnect');
-          resolve();
-        });
-
-        this.process.kill('SIGTERM');
-      } else {
-        resolve();
+    try {
+      if (this.client && this.isConnected) {
+        console.log('Disconnecting from MCP server...');
+        await this.client.close();
+        this.isConnected = false;
+        this.client = null;
+        this.transport = null;
+        console.log('Disconnected from MCP server');
       }
-    });
+    } catch (error) {
+      console.error('Error during disconnect:', error);
+      throw error;
+    }
   }
 
-  async sendRequest(method: string, params?: unknown): Promise<MCPResponse> {
-    if (!this.isConnected || !this.process) {
-      throw new Error('MCP client not connected');
+  async listTools(): Promise<MCPToolCallResult> {
+    if (!this.client || !this.isConnected) {
+      throw new Error('Client not connected. Call connect() first.');
     }
 
-    const id = (++this.messageId).toString();
-    const request: MCPRequest = {
-      id,
-      type: 'request',
-      method,
-      params
-    };
-
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        this.pendingRequests.delete(id);
-        reject(new Error(`Request timeout: ${method}`));
-      }, this.config.timeout);
-
-      this.pendingRequests.set(id, { resolve, reject, timeout });
-
-      const message = JSON.stringify(request) + '\n';
-      this.process!.stdin?.write(message);
-    });
+    try {
+      console.log('Listing available tools...');
+      const response = await this.client.request(
+        { method: 'tools/list', params: undefined },
+        ListToolsResultSchema
+      );
+      console.log(`Found ${(response as any).tools?.length || 0} tools`);
+      return response as MCPToolCallResult;
+    } catch (error) {
+      console.error('Failed to list tools:', error);
+      throw error;
+    }
   }
 
-  private handleMessage(data: string): void {
-    const lines = data.trim().split('\n');
-    
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      
-      try {
-        const message: MCPMessage = JSON.parse(line);
-        
-        if (message.type === 'response') {
-          this.handleResponse(message as MCPResponse);
-        } else if (message.type === 'notification') {
-          this.emit('notification', message);
+  async callTool(
+    name: string,
+    arguments_: Record<string, unknown> = {}
+  ): Promise<MCPToolCallResult> {
+    if (!this.client || !this.isConnected) {
+      throw new Error('Client not connected. Call connect() first.');
+    }
+
+    try {
+      console.log(`Calling tool: ${name} with arguments:`, arguments_);
+      const response = await this.client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name,
+            arguments: arguments_,
+          },
+        },
+        CallToolResultSchema,
+        {
+          timeout: this.config.timeout,
         }
-      } catch (error) {
-        console.error('Failed to parse MCP message:', error);
-        this.emit('error', new Error(`Invalid JSON: ${line}`));
-      }
+      );
+      return response as MCPToolCallResult;
+    } catch (error) {
+      console.error(`Failed to call tool '${name}':`, error);
+      throw error;
     }
   }
 
-  private handleResponse(response: MCPResponse): void {
-    const pending = this.pendingRequests.get(response.id);
-    if (!pending) {
-      console.warn('Received response for unknown request:', response.id);
-      return;
-    }
-
-    this.pendingRequests.delete(response.id);
-    clearTimeout(pending.timeout);
-
-    if (response.error) {
-      pending.reject(new Error(response.error.message));
-    } else {
-      pending.resolve(response);
-    }
+  // Utility methods
+  isClientConnected(): boolean {
+    return this.isConnected && this.client !== null;
   }
 
-  private setupErrorHandling(): void {
-    this.on('error', (error) => {
-      console.error('MCP Client Error:', error);
-    });
-
-    process.on('exit', () => {
-      this.disconnect().catch(console.error);
-    });
-
-    process.on('SIGINT', () => {
-      this.disconnect().then(() => process.exit(0));
-    });
-
-    process.on('SIGTERM', () => {
-      this.disconnect().then(() => process.exit(0));
-    });
+  getCommand(): string {
+    return `${this.config.command} ${this.config.args.join(' ')}`;
   }
 
   get connected(): boolean {

@@ -1,76 +1,67 @@
-export interface MCPMessage {
-  id: string;
-  type: 'request' | 'response' | 'notification';
-  method?: string;
-  params?: unknown;
-  result?: unknown;
-  error?: MCPError;
+// MCP Tool Call Result from SDK
+export interface MCPToolCallResult {
+  content?: Array<{
+    type: string;
+    text?: string;
+  }>;
+  isError?: boolean;
 }
 
-export interface MCPError {
-  code: number;
-  message: string;
-  data?: unknown;
-}
-
-export interface MCPRequest extends MCPMessage {
-  type: 'request';
-  method: string;
-  params?: unknown;
-}
-
-export interface MCPResponse extends MCPMessage {
-  type: 'response';
-  result?: unknown;
-  error?: MCPError;
-}
-
-export interface MCPNotification extends MCPMessage {
-  type: 'notification';
-  method: string;
-  params?: unknown;
-}
-
-export interface BrowserCommand {
-  action: 'navigate' | 'click' | 'type' | 'wait' | 'screenshot' | 'snapshot';
-  selector?: string;
-  value?: string;
-  url?: string;
-  timeout?: number;
-  options?: Record<string, unknown>;
-}
-
-export interface BrowserResult {
-  success: boolean;
-  data?: unknown;
-  error?: string;
-  timestamp: number;
-}
-
-export interface AccessibilitySnapshot {
-  nodes: AccessibilityNode[];
-  url: string;
-  title: string;
-  timestamp: number;
-}
-
-export interface AccessibilityNode {
-  id: string;
-  role: string;
+// Element Information from MCP Snapshot
+export interface ElementInfo {
+  ref: string;
+  type: string;
+  role?: string;
   name?: string;
-  value?: string;
-  description?: string;
-  children?: string[];
-  parent?: string;
-  bounds?: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
-  properties?: Record<string, unknown>;
+  text?: string;
+  url?: string;
+  disabled?: boolean;
+  active?: boolean;
+  cursor?: string;
 }
 
+// MCP Snapshot Result
+export interface SnapshotResult {
+  elements: ElementInfo[];
+  rawYaml: string;
+}
+
+// Browser Action Result
+export interface ActionResult {
+  success: boolean;
+  error?: string;
+  url?: string;
+  text?: string;
+}
+
+// Playwright MCP Tool Names
+export type PlaywrightTool = 
+  | 'playwright_goto'
+  | 'playwright_click'
+  | 'playwright_type'
+  | 'playwright_scroll'
+  | 'playwright_screenshot'
+  | 'playwright_snapshot'
+  | 'playwright_wait_for_element'
+  | 'playwright_wait_for_text'
+  | 'playwright_get_text'
+  | 'playwright_get_attribute';
+
+// Tool call parameters for different Playwright tools
+export interface PlaywrightToolParams {
+  playwright_goto: { url: string };
+  playwright_click: { selector?: string; ref?: string };
+  playwright_type: { selector?: string; ref?: string; text: string };
+  playwright_scroll: { direction?: 'up' | 'down'; amount?: number };
+  playwright_screenshot: { fullPage?: boolean };
+  playwright_snapshot: {};
+  playwright_wait_for_element: { selector?: string; ref?: string; timeout?: number };
+  playwright_wait_for_text: { text: string; timeout?: number };
+  playwright_get_text: { selector?: string; ref?: string };
+  playwright_get_attribute: { selector?: string; ref?: string; attribute: string };
+}
+
+// MCP Client Configuration
 export interface MCPClientConfig {
   command: string;
   args: string[];
@@ -79,6 +70,7 @@ export interface MCPClientConfig {
   retryDelay: number;
 }
 
+// Browser Configuration
 export interface BrowserConfig {
   headless: boolean;
   viewport: {

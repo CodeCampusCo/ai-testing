@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MCPClient } from '../../src/mcp/client.js';
 import { MCPClientConfig } from '../../src/types/mcp.js';
 
@@ -8,9 +8,9 @@ describe('MCPClient', () => {
 
   beforeEach(() => {
     config = {
-      command: 'node',
-      args: ['-e', 'process.exit(0)'],
-      timeout: 1000,
+      command: 'echo',
+      args: ['test'],
+      timeout: 5000,
       retries: 1,
       retryDelay: 100
     };
@@ -28,12 +28,21 @@ describe('MCPClient', () => {
     expect(client.connected).toBe(false);
   });
 
-  test('should handle sendRequest when not connected', async () => {
+  test('should handle callTool when not connected', async () => {
     try {
-      await client.sendRequest('test', {});
+      await client.callTool('test', {});
     } catch (error) {
       expect(error).toBeInstanceOf(Error);
-      expect((error as Error).message).toBe('MCP client not connected');
+      expect((error as Error).message).toBe('Client not connected. Call connect() first.');
+    }
+  });
+
+  test('should handle listTools when not connected', async () => {
+    try {
+      await client.listTools();
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe('Client not connected. Call connect() first.');
     }
   });
 

@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "@langchain/langgraph": "^0.0.26",
+    "@modelcontextprotocol/sdk": "^1.17.5",
     "commander": "^11.1.0",
     "inquirer": "^9.2.12",
     "yaml": "^2.3.4",

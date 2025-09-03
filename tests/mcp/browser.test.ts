@@ -1,88 +1,73 @@
 import { describe, test, expect, beforeEach } from 'vitest';
-import { BrowserController } from '../../src/mcp/browser.js';
-import { BrowserConfig, BrowserCommand } from '../../src/types/mcp.js';
+import { PlaywrightMCPClient } from '../../src/mcp/browser.js';
+import { MCPClientConfig } from '../../src/types/mcp.js';
 
-describe('BrowserController', () => {
-  let browser: BrowserController;
-  let config: BrowserConfig;
+describe('PlaywrightMCPClient', () => {
+  let browser: PlaywrightMCPClient;
+  let config: MCPClientConfig;
 
   beforeEach(() => {
     config = {
-      headless: true,
-      viewport: { width: 1280, height: 720 },
-      timeout: 30000
+      command: 'echo',
+      args: ['test'],
+      timeout: 5000,
+      retries: 1,
+      retryDelay: 100
     };
-    browser = new BrowserController(config);
+    browser = new PlaywrightMCPClient(config);
   });
 
-  test('should create browser controller with config', () => {
-    expect(browser).toBeInstanceOf(BrowserController);
+  test('should create playwright MCP client', () => {
+    expect(browser).toBeInstanceOf(PlaywrightMCPClient);
     expect(browser.isConnected).toBe(false);
     expect(browser.currentUrl).toBeNull();
   });
 
-  test('should handle browser commands', async () => {
-    const command: BrowserCommand = {
-      action: 'navigate',
-      url: 'https://example.com'
-    };
-
+  test('should handle navigation', async () => {
     try {
-      await browser.executeCommand(command);
+      await browser.navigate('https://example.com');
     } catch (error) {
       // Expected to fail since not connected
       expect(error).toBeInstanceOf(Error);
     }
   });
 
-  test('should validate command parameters', async () => {
-    const invalidCommand: BrowserCommand = {
-      action: 'navigate'
-      // Missing required url
-    };
-
-    await expect(browser.executeCommand(invalidCommand))
-      .rejects
-      .toThrow('URL required for navigate action');
-  });
-
-  test('should handle click commands', async () => {
-    const command: BrowserCommand = {
-      action: 'click',
-      selector: '.button',
-      timeout: 5000
-    };
-
+  test('should handle click actions', async () => {
     try {
-      await browser.executeCommand(command);
+      await browser.click('#button');
     } catch (error) {
       // Expected to fail since not connected
       expect(error).toBeInstanceOf(Error);
     }
   });
 
-  test('should handle type commands', async () => {
-    const command: BrowserCommand = {
-      action: 'type',
-      selector: 'input[name="email"]',
-      value: 'test@example.com'
-    };
-
+  test('should handle type actions', async () => {
     try {
-      await browser.executeCommand(command);
+      await browser.type('hello world', 'input[type="text"]');
     } catch (error) {
       // Expected to fail since not connected
       expect(error).toBeInstanceOf(Error);
     }
   });
 
-  test('should reject invalid commands', async () => {
-    const command = {
-      action: 'invalid-action'
-    } as BrowserCommand;
+  test('should handle snapshot retrieval', async () => {
+    try {
+      const snapshot = await browser.getSnapshot();
+      expect(snapshot).toHaveProperty('elements');
+      expect(snapshot).toHaveProperty('rawYaml');
+      expect(Array.isArray(snapshot.elements)).toBe(true);
+    } catch (error) {
+      // Expected to fail since not connected
+      expect(error).toBeInstanceOf(Error);
+    }
+  });
 
-    await expect(browser.executeCommand(command))
-      .rejects
-      .toThrow('Unsupported action: invalid-action');
+  test('should handle tool listing', async () => {
+    try {
+      await browser.listTools();
+    } catch (error) {
+      // Expected to fail since not connected
+      expect(error).toBeInstanceOf(Error);
+    }
   });
 });
