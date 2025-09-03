@@ -1,0 +1,260 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AI E2E Test Framework Configuration",
+  "description": "Configuration schema for AI-Powered E2E Test Framework",
+  "type": "object",
+  "required": ["project", "browser"],
+  "properties": {
+    "project": {
+      "type": "object",
+      "required": ["name", "base_url"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Project name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Project description"
+        },
+        "base_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Base URL for all tests"
+        },
+        "timeout": {
+          "type": "number",
+          "minimum": 1000,
+          "default": 30000,
+          "description": "Default timeout in milliseconds"
+        },
+        "version": {
+          "type": "string",
+          "description": "Project version"
+        }
+      }
+    },
+    "browser": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["chromium", "firefox", "webkit"],
+          "default": "chromium",
+          "description": "Browser type"
+        },
+        "headless": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run browser in headless mode"
+        },
+        "viewport": {
+          "type": "object",
+          "properties": {
+            "width": {
+              "type": "number",
+              "minimum": 320,
+              "default": 1280,
+              "description": "Browser width"
+            },
+            "height": {
+              "type": "number",
+              "minimum": 240,
+              "default": 720,
+              "description": "Browser height"
+            }
+          }
+        },
+        "device_emulation": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Device name for emulation"
+            },
+            "user_agent": {
+              "type": "string",
+              "description": "Custom user agent"
+            }
+          }
+        }
+      }
+    },
+    "authentication": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": ["form", "oauth", "token", "cookies"],
+          "default": "form",
+          "description": "Authentication method"
+        },
+        "username": {
+          "type": "string",
+          "description": "Username or email"
+        },
+        "password": {
+          "type": "string",
+          "description": "Password"
+        },
+        "login_url": {
+          "type": "string",
+          "description": "Login page URL"
+        },
+        "success_indicator": {
+          "type": "string",
+          "description": "CSS selector indicating successful login"
+        },
+        "token_endpoint": {
+          "type": "string",
+          "format": "uri",
+          "description": "OAuth token endpoint"
+        },
+        "client_id": {
+          "type": "string",
+          "description": "OAuth client ID"
+        },
+        "client_secret": {
+          "type": "string",
+          "description": "OAuth client secret"
+        }
+      }
+    },
+    "test_data": {
+      "type": "object",
+      "description": "Test data and variables",
+      "additionalProperties": true
+    },
+    "environments": {
+      "type": "object",
+      "description": "Environment-specific configurations",
+      "patternProperties": {
+        "^[a-zA-Z][a-zA-Z0-9_-]*$": {
+          "type": "object",
+          "properties": {
+            "base_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "debug": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "properties": {
+        "retry_count": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 3,
+          "description": "Number of retry attempts"
+        },
+        "retry_delay": {
+          "type": "number",
+          "minimum": 0,
+          "default": 1000,
+          "description": "Delay between retries in milliseconds"
+        },
+        "parallel": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run tests in parallel"
+        },
+        "max_parallel": {
+          "type": "number",
+          "minimum": 1,
+          "default": 4,
+          "description": "Maximum parallel executions"
+        },
+        "screenshot_on_failure": {
+          "type": "boolean",
+          "default": true,
+          "description": "Take screenshot on test failure"
+        },
+        "video_recording": {
+          "type": "boolean",
+          "default": false,
+          "description": "Record video of test execution"
+        },
+        "tracing": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable Playwright tracing"
+        }
+      }
+    },
+    "reporting": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["json", "html", "junit", "allure"]
+          },
+          "default": ["json", "html"],
+          "description": "Report output formats"
+        },
+        "output_dir": {
+          "type": "string",
+          "default": "./test-results",
+          "description": "Report output directory"
+        },
+        "include_screenshots": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include screenshots in reports"
+        },
+        "include_accessibility": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include accessibility insights"
+        },
+        "include_performance": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include performance metrics"
+        }
+      }
+    },
+    "ai": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": ["openai", "anthropic", "google"],
+          "default": "openai",
+          "description": "AI provider"
+        },
+        "model": {
+          "type": "string",
+          "description": "AI model name"
+        },
+        "api_key": {
+          "type": "string",
+          "description": "AI provider API key"
+        },
+        "max_tokens": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 8000,
+          "default": 2000,
+          "description": "Maximum tokens per request"
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2,
+          "default": 0.3,
+          "description": "AI model temperature"
+        }
+      }
+    }
+  }
+}
