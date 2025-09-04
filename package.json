@@ -2,6 +2,7 @@
   "name": "ai-e2e-test-framework",
   "version": "0.1.0-alpha",
   "description": "AI-Powered End-to-End Testing Framework using Playwright MCP and LangGraph.js",
+  "type": "module",
   "main": "dist/index.js",
   "bin": {
     "my-cli-generate": "dist/cli/generate.js",
@@ -45,6 +46,7 @@
   },
   "dependencies": {
     "@langchain/langgraph": "^0.0.26",
+    "@modelcontextprotocol/sdk": "^1.17.5",
     "commander": "^11.1.0",
     "inquirer": "^9.2.12",
     "yaml": "^2.3.4",
