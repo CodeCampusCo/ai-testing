@@ -124,6 +124,9 @@ claude.md.bak
 .mcp-config.json
 mcp-config.json
 
+# Configuration files (legacy - now using .env)
+.ai-e2e-config.json
+
 # Build artifacts
 build/
 dist/

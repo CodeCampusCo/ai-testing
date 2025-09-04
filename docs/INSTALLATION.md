@@ -142,38 +142,45 @@ EOF
 
 ## 4. Configure AI Provider
 
-### Option A: OpenAI
-1. Visit [platform.openai.com](https://platform.openai.com/)
-2. Create an account and generate an API key
-3. Set environment variables:
+### Option A: Manual .env File Setup (Recommended)
 
+1. **Get API Key from your provider:**
+   - **OpenAI**: [platform.openai.com](https://platform.openai.com/)
+   - **Anthropic**: [console.anthropic.com](https://console.anthropic.com/)
+   - **Google AI**: [ai.google.dev](https://ai.google.dev/)
+
+2. **Create .env file:**
+```bash
+# Copy example file
+cp .env.example .env
+
+# Edit .env with your configuration
+AI_PROVIDER=openai  # or anthropic, google
+AI_MODEL=gpt-4      # optional - uses provider defaults
+AI_API_KEY=your-api-key-here
+```
+
+3. **Provider-specific default models:**
+```bash
+# OpenAI
+AI_PROVIDER=openai
+AI_MODEL=gpt-4      # default
+
+# Anthropic
+AI_PROVIDER=anthropic
+AI_MODEL=claude-3-sonnet-20240229  # default
+
+# Google AI
+AI_PROVIDER=google
+AI_MODEL=gemini-pro  # default
+```
+
+### Option B: Environment Variables
 ```bash
 # Add to ~/.bashrc, ~/.zshrc, or ~/.profile
 export AI_PROVIDER=openai
 export AI_MODEL=gpt-4
 export AI_API_KEY=your-openai-api-key-here
-```
-
-### Option B: Anthropic (Claude)
-1. Visit [console.anthropic.com](https://console.anthropic.com/)
-2. Create an account and generate an API key
-3. Set environment variables:
-
-```bash
-export AI_PROVIDER=anthropic
-export AI_MODEL=claude-3-sonnet-20240229
-export AI_API_KEY=your-anthropic-api-key-here
-```
-
-### Option C: Google AI
-1. Visit [ai.google.dev](https://ai.google.dev/)
-2. Create an account and generate an API key
-3. Set environment variables:
-
-```bash
-export AI_PROVIDER=google
-export AI_MODEL=gemini-pro
-export AI_API_KEY=your-google-api-key-here
 ```
 
 ## 5. Optional Configuration
@@ -196,16 +203,16 @@ export MAX_PARALLEL_TESTS=4              # Maximum parallel test execution
 export AI_REQUEST_TIMEOUT=30000          # AI request timeout (ms)
 ```
 
-### Create Environment File
+### Project-Specific .env File
 ```bash
-# Create .env file for project-specific settings
-cat > ~/.ai-e2e-framework.env << EOF
-AI_PROVIDER=openai
-AI_MODEL=gpt-4
-AI_API_KEY=your-api-key-here
-LOG_LEVEL=info
-SCREENSHOT_ON_FAILURE=true
-EOF
+# Each project can have its own .env file
+cd your-project-directory
+
+# Create from template
+cp /path/to/ai-e2e-framework/.env.example .env
+
+# Edit with project-specific settings
+nano .env
 ```
 
 ## 6. Verify Installation
@@ -290,17 +297,20 @@ cat ~/.config/mcp/config.json | jq .
 ```
 
 #### 2. AI Provider Authentication Failed
-**Error**: `Invalid API key` or `Authentication failed`
+**Error**: `No API key found` or `Authentication failed`
 
 **Solution**:
 ```bash
-# Check if environment variables are set
+# Check if .env file exists
+ls -la .env
+
+# Check environment variables
 echo $AI_PROVIDER
 echo $AI_API_KEY
 
-# Test API key manually
-curl -H "Authorization: Bearer $AI_API_KEY" \
-  https://api.openai.com/v1/models
+# Create .env from template
+cp .env.example .env
+# Edit .env with your API key
 ```
 
 #### 3. Permission Denied Errors

@@ -9,11 +9,13 @@
 npm install -g ai-e2e-test-framework
 
 # Configure AI provider (one-time setup)
-ai-e2e-test config
-# OR set environment variables
-export OPENAI_API_KEY=your-openai-key
-export ANTHROPIC_API_KEY=your-anthropic-key  
-export GOOGLE_AI_API_KEY=your-google-key
+cp .env.example .env
+# Edit .env with your API key
+
+# OR use environment variables
+export AI_PROVIDER=openai  # or anthropic, google
+export AI_API_KEY=your-api-key-here
+export AI_MODEL=gpt-4  # optional, uses provider defaults
 
 # Generate test scenario from natural language
 ai-e2e-test generate -i "Test login flow for my website"

@@ -7,9 +7,10 @@ import ora from 'ora';
 import boxen from 'boxen';
 import { promises as fs } from 'fs';
 import { join, resolve } from 'path';
-import { SimpleTestWorkflow, createSimpleTestWorkflow } from '../workflow/simple-workflow.js';
+import { createSimpleTestWorkflow } from '../workflow/simple-workflow.js';
 import { AIProviderConfig } from '../types/workflow.js';
 import { MCPClientConfig } from '../types/mcp.js';
+import dotenv from 'dotenv';
 
 const program = new Command();
 
@@ -60,21 +61,6 @@ program
     }
   });
 
-// Config command
-program
-  .command('config')
-  .description('Configure AI providers and settings')
-  .option('--provider <provider>', 'Set default AI provider')
-  .option('--key <apiKey>', 'Set API key for provider')
-  .option('--show', 'Show current configuration')
-  .action(async (options) => {
-    try {
-      await handleConfigCommand(options);
-    } catch (error) {
-      console.error(chalk.red(`Error: ${error instanceof Error ? error.message : error}`));
-      process.exit(1);
-    }
-  });
 
 async function handleGenerateCommand(options: any) {
   console.log(boxen(
@@ -294,111 +280,43 @@ async function handleRunCommand(options: any) {
   }
 }
 
-async function handleConfigCommand(options: any) {
-  const configPath = join(process.cwd(), '.ai-e2e-config.json');
-
-  if (options.show) {
-    try {
-      const config = JSON.parse(await fs.readFile(configPath, 'utf-8'));
-      console.log(boxen(
-        'Current Configuration:\\n\\n' +
-        Object.entries(config).map(([key, value]) => 
-          `${chalk.cyan(key)}: ${key.includes('key') || key.includes('Key') ? 
-            chalk.gray('***hidden***') : chalk.white(String(value))}`
-        ).join('\\n'),
-        { padding: 1, borderColor: 'blue' }
-      ));
-    } catch {
-      console.log(chalk.yellow('No configuration file found. Use --provider and --key to set up.'));
-    }
-    return;
-  }
-
-  // Interactive configuration
-  const answers = await inquirer.prompt([
-    {
-      type: 'list',
-      name: 'provider',
-      message: 'Select AI provider:',
-      choices: ['openai', 'anthropic', 'google'],
-      default: options.provider || 'openai'
-    },
-    {
-      type: 'password',
-      name: 'apiKey',
-      message: (answers) => `Enter ${answers.provider} API key:`,
-      mask: '*',
-      validate: (input) => input.trim() ? true : 'API key is required'
-    },
-    {
-      type: 'input',
-      name: 'model',
-      message: (answers) => `Enter model name (optional):`,
-      default: (answers) => {
-        const defaults = {
-          openai: 'gpt-4',
-          anthropic: 'claude-3-sonnet-20240229',
-          google: 'gemini-pro'
-        };
-        return options.model || defaults[answers.provider as keyof typeof defaults];
-      }
-    }
-  ]);
-
-  const config = {
-    provider: answers.provider,
-    apiKey: answers.apiKey,
-    model: answers.model,
-    updatedAt: new Date().toISOString()
-  };
-
-  await fs.writeFile(configPath, JSON.stringify(config, null, 2));
-  console.log(chalk.green('✅ Configuration saved successfully!'));
-}
 
 async function getAIConfig(provider?: string, model?: string): Promise<AIProviderConfig> {
-  const configPath = join(process.cwd(), '.ai-e2e-config.json');
+  dotenv.config();
   
-  try {
-    const config = JSON.parse(await fs.readFile(configPath, 'utf-8'));
-    return {
-      provider: provider || config.provider,
-      apiKey: config.apiKey,
-      model: model || config.model,
-      temperature: 0.1,
-      maxTokens: 2000
-    };
-  } catch {
-    // No config file, check environment variables
-    const envProvider = provider || 'openai';
-    let apiKey = '';
-    
-    switch (envProvider) {
-      case 'openai':
-        apiKey = process.env.OPENAI_API_KEY || '';
-        break;
-      case 'anthropic':
-        apiKey = process.env.ANTHROPIC_API_KEY || '';
-        break;
-      case 'google':
-        apiKey = process.env.GOOGLE_AI_API_KEY || '';
-        break;
-    }
-
-    if (!apiKey) {
-      throw new Error(`No API key found for ${envProvider}. Use 'ai-e2e-test config' or set environment variables.`);
-    }
-
-    return {
-      provider: envProvider as AIProviderConfig['provider'],
-      apiKey,
-      model: model || (envProvider === 'openai' ? 'gpt-4' : 
-                       envProvider === 'anthropic' ? 'claude-3-sonnet-20240229' : 'gemini-pro'),
-      temperature: 0.1,
-      maxTokens: 2000
-    };
+  const envConfig = getEnvConfig();
+  const finalProvider = provider || envConfig.provider || 'openai';
+  
+  if (!envConfig.apiKey) {
+    throw new Error(`No API key found for ${finalProvider}. Please set AI_API_KEY environment variable or create .env file with API key.`);
   }
+
+  return {
+    provider: finalProvider as AIProviderConfig['provider'],
+    apiKey: envConfig.apiKey,
+    model: model || envConfig.model || getDefaultModel(finalProvider),
+    temperature: 0.1,
+    maxTokens: 2000
+  };
 }
+
+function getEnvConfig(): { provider?: string; model?: string; apiKey?: string } {
+  return {
+    provider: process.env.AI_PROVIDER,
+    model: process.env.AI_MODEL,
+    apiKey: process.env.AI_API_KEY
+  };
+}
+
+function getDefaultModel(provider: string): string {
+  const defaults = {
+    openai: 'gpt-4',
+    anthropic: 'claude-3-sonnet-20240229',
+    google: 'gemini-pro'
+  };
+  return defaults[provider as keyof typeof defaults] || 'gpt-4';
+}
+
 
 function getMCPConfig(): MCPClientConfig {
   return {
