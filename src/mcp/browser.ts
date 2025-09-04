@@ -2,7 +2,6 @@ import { MCPClient } from './client.js';
 import { 
   ElementInfo,
   SnapshotResult,
-  ActionResult,
   MCPClientConfig
 } from '../types/mcp.js';
 
