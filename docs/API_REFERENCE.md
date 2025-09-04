@@ -6,28 +6,42 @@ This document provides comprehensive API documentation for the AI-Powered E2E Te
 
 ## 1. CLI Commands
 
-### 1.1 my-cli-generate
+### 1.1 ai-e2e-test generate
 
-Interactive test generation command.
+Generate test scenarios from natural language descriptions.
 
 #### Syntax
 ```bash
-my-cli-generate [options]
+ai-e2e-test generate [options]
+# OR
+ai-e2e-test g [options]
 ```
 
 #### Options
 | Option | Type | Description | Default |
 |--------|------|-------------|---------|
-| `--url <url>` | string | Target website URL for analysis | - |
-| `--project-name <name>` | string | Name for new project | - |
-| `--init` | boolean | Initialize new project structure | false |
-| `--template <type>` | string | Use predefined template (ecommerce, admin, mobile, api) | - |
-| `--output-dir <path>` | string | Output directory for generated files | ./projects |
-| `--config <path>` | string | Custom configuration file path | - |
-| `--ai-model <model>` | string | Override default AI model | - |
-| `--headless` | boolean | Run browser analysis in headless mode | true |
-| `--verbose` | boolean | Enable verbose logging | false |
-| `--doctor` | boolean | Run system diagnostics | false |
+| `-i, --input <description>` | string | Test description in natural language | - |
+| `-f, --file <path>` | string | Input file with test description | - |
+| `-o, --output <path>` | string | Output file for generated scenario | auto-generated |
+| `--provider <provider>` | string | AI provider (openai\|anthropic\|google) | openai |
+| `--model <model>` | string | AI model to use | provider default |
+| `--interactive` | boolean | Interactive mode with prompts | false |
+| `-h, --help` | boolean | Display help for command | false |
+
+#### Examples
+```bash
+# Generate from description
+ai-e2e-test generate -i "Test user login flow with validation"
+
+# Generate from file
+ai-e2e-test generate -f ./test-requirements.md
+
+# Interactive mode
+ai-e2e-test generate --interactive
+
+# Use specific AI provider
+ai-e2e-test generate -i "Test checkout flow" --provider anthropic
+```
 | `--help` | boolean | Show help information | false |
 
 #### Examples
@@ -53,7 +67,70 @@ my-cli-generate --config "./custom-config.yml" --verbose
 - `4`: AI provider error
 - `5`: File system error
 
-### 1.2 my-cli-run
+### 1.2 ai-e2e-test run
+
+Execute test scenarios with complete AI workflow.
+
+#### Syntax
+```bash
+ai-e2e-test run [options]
+# OR
+ai-e2e-test r [options]
+```
+
+#### Options
+| Option | Type | Description | Default |
+|--------|------|-------------|---------|
+| `-i, --input <description>` | string | Test description (generates scenario first) | - |
+| `-f, --file <path>` | string | Test scenario file to execute | - |
+| `-o, --output <path>` | string | Output directory for results | ./test-results |
+| `--provider <provider>` | string | AI provider (openai\|anthropic\|google) | openai |
+| `--model <model>` | string | AI model to use | provider default |
+| `--headless` | boolean | Run browser in headless mode | true |
+| `--no-headless` | boolean | Run browser in visible mode | false |
+| `--interactive` | boolean | Interactive mode with prompts | false |
+| `-h, --help` | boolean | Display help for command | false |
+
+#### Examples
+```bash
+# Complete workflow from description
+ai-e2e-test run -i "Test Google search functionality"
+
+# Run from existing scenario file
+ai-e2e-test run -f ./my-scenario.json
+
+# Interactive mode with visible browser
+ai-e2e-test run --interactive --no-headless
+```
+
+### 1.3 ai-e2e-test config
+
+Configure AI providers and settings.
+
+#### Syntax
+```bash
+ai-e2e-test config [options]
+```
+
+#### Options
+| Option | Type | Description | Default |
+|--------|------|-------------|---------|
+| `--provider <provider>` | string | Set default AI provider | - |
+| `--key <apiKey>` | string | Set API key for provider | - |
+| `--show` | boolean | Show current configuration | false |
+| `-h, --help` | boolean | Display help for command | false |
+
+#### Examples
+```bash
+# Interactive configuration
+ai-e2e-test config
+
+# Show current settings
+ai-e2e-test config --show
+
+# Quick setup
+ai-e2e-test config --provider openai --key sk-...
+```
 
 Test execution command.
 

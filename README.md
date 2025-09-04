@@ -8,51 +8,57 @@
 # Install the framework
 npm install -g ai-e2e-test-framework
 
-# Configure MCP client
-echo '{
-  "mcpServers": {
-    "playwright": {
-      "command": "npx",
-      "args": ["@playwright/mcp@latest"]
-    }
-  }
-}' > ~/.mcp-config.json
+# Configure AI provider (one-time setup)
+ai-e2e-test config
+# OR set environment variables
+export OPENAI_API_KEY=your-openai-key
+export ANTHROPIC_API_KEY=your-anthropic-key  
+export GOOGLE_AI_API_KEY=your-google-key
 
-# Set up environment
-export AI_PROVIDER=openai
-export AI_API_KEY=your-api-key-here
+# Generate test scenario from natural language
+ai-e2e-test generate -i "Test login flow for my website"
 
-# Create your first test project
-my-cli-generate --init --project-name "my-website-tests"
+# Generate interactively 
+ai-e2e-test generate --interactive
 
-# Generate tests interactively
-my-cli-generate --url "https://example.com"
+# Run complete test workflow (generate + execute + analyze)
+ai-e2e-test run -i "Test Google search functionality"
 
-# Run tests
-my-cli-run --project "my-website-tests" --scenario "login-test"
+# Run from existing scenario file
+ai-e2e-test run -f ./my-test-scenario.json
 ```
 
 ## ✨ Key Features
 
-- **🤖 AI-Powered**: Natural language test creation and analysis
-- **⚡ Fast & Reliable**: Uses Playwright MCP accessibility snapshots instead of screenshots
-- **📝 Human-Readable**: Write tests in Markdown, configure in YAML
-- **🔄 CI/CD Ready**: Headless execution with detailed reporting
-- **🛡️ Accessibility-First**: Built-in accessibility testing and insights
-- **🎯 Interactive Mode**: Conversational test generation
+- **🤖 AI-Powered**: Natural language → executable browser tests with 3 specialized agents
+- **⚡ Dynamic MCP Integration**: Runtime tool discovery with 21+ Playwright automation tools  
+- **🎯 Multi-Provider AI**: OpenAI, Anthropic, Google AI support with automatic failover
+- **📊 Intelligent Analysis**: AI-powered result analysis with actionable insights
+- **🛡️ Accessibility-First**: Built-in accessibility scoring and issue detection
+- **🚀 Production CLI**: Complete command suite with streaming progress updates
+- **🔄 CI/CD Ready**: Headless execution with comprehensive JSON reporting
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Your Tests    │───▶│  AI Framework    │───▶│ Playwright MCP  │
-│   (.md + .yml)  │    │  (LangGraph.js)  │    │    Server       │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                               │
-                       ┌──────────────────┐
-                       │   AI Provider    │
-                       │ (GPT-4/Claude)   │
-                       └──────────────────┘
+┌────────────────────┐
+│ Natural Language Input  │
+│ "Test login flow"       │
+└─────────┬──────────┘
+           │
+           ▼ AI Workflow (3 Agents)
+┌─────────┴──────────┐
+│ 🧠 ScenarioGenerator  │ ──▶ Structured Test Steps
+├────────────────────┤
+│ 🌐 TestExecutor       │ ──▶ Browser Automation
+├────────────────────┤     (via Dynamic MCP)
+│ 📊 AnalysisAgent     │ ──▶ AI Insights & Reports
+└────────────────────┘
+           │
+           ▼ Multi-Provider AI
+┌────────────────────┐
+│ OpenAI │ Anthropic │ Google │
+└────────────────────┘
 ```
 
 ## 📖 Documentation

@@ -6,22 +6,23 @@
 
 ```mermaid
 graph TB
-    A[CLI Interface] --> B[LangGraph.js Orchestrator]
-    B --> C[Scenario Generation Agent]
-    B --> D[Test Execution Agent] 
-    B --> E[Report Analysis Agent]
+    A[CLI Interface] --> B[Simple Workflow Engine]
+    B --> C[ScenarioGeneratorAgent]
+    B --> D[TestExecutorAgent] 
+    B --> E[AnalysisAgent]
     
-    C --> F[AI Provider APIs]
-    D --> G[Playwright MCP Server]
+    C --> F[Multi-Provider AI<br/>OpenAI | Anthropic | Google]
+    D --> G[Dynamic MCP Client]
     E --> F
     
-    G --> H[Browser Engines]
+    G --> H[@playwright/mcp Server]
+    H --> I[Browser Engines<br/>Chrome | Firefox | Safari]
     
-    I[Configuration Files] --> B
-    J[Test Scenarios] --> B
+    J[Natural Language Input] --> B
+    K[Configuration] --> B
     
-    B --> K[Test Reports]
-    B --> L[Generated Files]
+    B --> L[JSON Test Reports]
+    B --> M[Screenshots & Snapshots]
 ```
 
 ### 1.2 Component Responsibilities

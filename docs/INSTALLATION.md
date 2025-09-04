@@ -10,8 +10,8 @@
 - **Storage**: 500MB free space
 
 ### Required Accounts
-- **AI Provider Account**: OpenAI, Anthropic, or Google AI
-- **MCP Compatible Client**: Claude Desktop, VS Code with MCP extension, or similar
+- **AI Provider Account**: OpenAI, Anthropic, or Google AI (API key required)
+- **Optional**: Claude Desktop, VS Code with MCP extension for advanced features
 
 ## 1. Install Node.js
 
@@ -38,6 +38,36 @@ npm --version   # Should show v8.x.x or higher
 ```
 
 ## 2. Install AI E2E Test Framework
+
+### Global Installation (Recommended)
+```bash
+# Install globally from npm (when published)
+npm install -g ai-e2e-test-framework
+
+# Verify installation
+ai-e2e-test --version  # Should show v0.1.0-alpha
+```
+
+### Local Development Installation
+```bash
+# Clone the repository
+git clone https://github.com/CodeCampusCo/ai-testing.git
+cd ai-testing
+
+# Install dependencies
+npm install
+
+# Build the project
+npm run build
+
+# Test installation
+node dist/cli/index.js --version
+
+# Link for global usage (optional)
+npm link
+```
+
+## 3. Configure AI Provider
 
 ### Global Installation (Recommended)
 ```bash
