@@ -3,15 +3,19 @@ import {
   ElementInfo,
   SnapshotResult,
   ActionResult,
-  BrowserConfig,
-  MCPClientConfig,
-  PlaywrightTool,
-  PlaywrightToolParams 
+  MCPClientConfig
 } from '../types/mcp.js';
 
 export class PlaywrightMCPClient {
   private mcpClient: MCPClient;
   private _currentUrl: string | null = null;
+  private availableTools: any[] = [];
+  private logger = {
+    debug: (msg: string, ...args: any[]) => console.log(`[DEBUG] ${msg}`, ...args),
+    info: (msg: string, ...args: any[]) => console.log(`[INFO] ${msg}`, ...args),
+    warn: (msg: string, ...args: any[]) => console.warn(`[WARN] ${msg}`, ...args),
+    error: (msg: string, ...args: any[]) => console.error(`[ERROR] ${msg}`, ...args)
+  };
 
   constructor(
     mcpConfig: MCPClientConfig = {
@@ -22,111 +26,82 @@ export class PlaywrightMCPClient {
       retryDelay: 1000
     }
   ) {
-    this.mcpClient = new MCPClient(mcpConfig);
+    this.mcpClient = new MCPClient(
+      mcpConfig.command || 'npx',
+      mcpConfig.args || ['@playwright/mcp@latest'],
+      this.logger
+    );
   }
 
   async connect(): Promise<void> {
     await this.mcpClient.connect();
+    
+    // Load available tools after connection
+    const toolsResult = await this.mcpClient.listTools();
+    if (toolsResult && (toolsResult as any).tools) {
+      this.availableTools = (toolsResult as any).tools;
+      console.log(`Loaded ${this.availableTools.length} available tools`);
+    }
   }
 
   async disconnect(): Promise<void> {
     await this.mcpClient.disconnect();
   }
 
-  async navigate(url: string): Promise<ActionResult> {
+  /**
+   * Call any MCP tool dynamically
+   */
+  async callTool(toolName: string, params: Record<string, unknown> = {}): Promise<any> {
     try {
-      await this.mcpClient.callTool('playwright_goto', { url });
-      this._currentUrl = url;
+      console.log(`Calling MCP tool: ${toolName}`, params);
+      const result = await this.mcpClient.callTool(toolName, params);
       
-      return {
-        success: true,
-        url: url
-      };
+      // Update current URL if this was a navigation
+      if (toolName === 'browser_navigate' && params.url) {
+        this._currentUrl = params.url as string;
+      }
+      
+      return result;
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Navigation failed'
-      };
+      console.error(`MCP tool call failed: ${toolName}`, error);
+      throw error;
     }
   }
 
-  async click(selector?: string, ref?: string): Promise<ActionResult> {
-    try {
-      const params: any = {};
-      if (selector) params.selector = selector;
-      if (ref) params.ref = ref;
-      
-      await this.mcpClient.callTool('playwright_click', params);
-      
-      return {
-        success: true
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Click failed'
-      };
-    }
+  /**
+   * Get available tools from MCP server
+   */
+  getAvailableTools(): any[] {
+    return this.availableTools;
   }
 
-  async type(text: string, selector?: string, ref?: string): Promise<ActionResult> {
-    try {
-      const params: any = { text };
-      if (selector) params.selector = selector;
-      if (ref) params.ref = ref;
-      
-      await this.mcpClient.callTool('playwright_type', params);
-      
-      return {
-        success: true,
-        text: text
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Type failed'
-      };
-    }
+  /**
+   * Get tool definition by name
+   */
+  getToolDefinition(toolName: string): any {
+    return this.availableTools.find(tool => tool.name === toolName);
   }
 
-  async waitForElement(selector?: string, ref?: string, timeout?: number): Promise<ActionResult> {
-    try {
-      const params: any = {};
-      if (selector) params.selector = selector;
-      if (ref) params.ref = ref;
-      if (timeout) params.timeout = timeout;
-      
-      await this.mcpClient.callTool('playwright_wait_for_element', params);
-      
-      return {
-        success: true
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Wait failed'
-      };
-    }
+  /**
+   * Check if a tool is available
+   */
+  hasToolAvailable(toolName: string): boolean {
+    return this.availableTools.some(tool => tool.name === toolName);
   }
 
-  async screenshot(fullPage: boolean = false): Promise<ActionResult> {
-    try {
-      await this.mcpClient.callTool('playwright_screenshot', { fullPage });
-      
-      return {
-        success: true
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Screenshot failed'
-      };
-    }
+  /**
+   * Convenience method for navigation
+   */
+  async navigate(url: string): Promise<any> {
+    return this.callTool('browser_navigate', { url });
   }
 
+  /**
+   * Get accessibility snapshot with parsed elements
+   */
   async getSnapshot(): Promise<SnapshotResult> {
     try {
-      const response = await this.mcpClient.callTool('playwright_snapshot', {});
+      const response = await this.callTool('browser_snapshot', {});
       
       // Extract YAML content from response
       let rawYaml = '';
@@ -223,6 +198,9 @@ export class PlaywrightMCPClient {
     return element;
   }
 
+  /**
+   * List all available MCP tools
+   */
   async listTools(): Promise<any> {
     return await this.mcpClient.listTools();
   }

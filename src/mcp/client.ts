@@ -7,18 +7,27 @@ import {
   CallToolResultSchema,
   ListToolsResultSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { 
-  MCPToolCallResult,
-  MCPClientConfig 
-} from '../types/mcp.js';
+import { MCPToolCallResult } from '../types/mcp.js';
+
+interface Logger {
+  debug: (message: string, ...args: any[]) => void;
+  info: (message: string, ...args: any[]) => void;
+  warn: (message: string, ...args: any[]) => void;
+  error: (message: string, ...args: any[]) => void;
+}
 
 export class MCPClient {
   private client: Client | null = null;
   private transport: StdioClientTransport | null = null;
   private isConnected = false;
+  private command: string;
+  private args: string[];
+  private logger: Logger;
 
-  constructor(private config: MCPClientConfig) {
-    // No need for EventEmitter inheritance
+  constructor(command: string, args: string[], logger: Logger) {
+    this.command = command;
+    this.args = args;
+    this.logger = logger;
   }
 
   async connect(): Promise<void> {
@@ -27,12 +36,12 @@ export class MCPClient {
     }
 
     try {
-      console.log(`Connecting to MCP server: ${this.config.command} ${this.config.args.join(' ')}`);
+      this.logger.info(`Connecting to MCP server: ${this.command} ${this.args.join(' ')}`);
 
       // Create STDIO transport
       this.transport = new StdioClientTransport({
-        command: this.config.command,
-        args: this.config.args,
+        command: this.command,
+        args: this.args,
         env: {
           ...getDefaultEnvironment(),
         },
@@ -41,12 +50,12 @@ export class MCPClient {
 
       // Set up error handlers
       this.transport.onerror = async (error: any) => {
-        console.error(`Transport error: ${error}`);
+        this.logger.error(`Transport error: ${error}`);
         this.isConnected = false;
       };
 
       this.transport.onclose = async () => {
-        console.log('Transport connection closed');
+        this.logger.info('Transport connection closed');
         this.isConnected = false;
       };
 
@@ -68,9 +77,9 @@ export class MCPClient {
       // Connect to the transport
       await this.client.connect(this.transport);
       this.isConnected = true;
-      console.log('Successfully connected to MCP server');
+      this.logger.info('Successfully connected to MCP server');
     } catch (error) {
-      console.error('Failed to connect to MCP server:', error);
+      this.logger.error('Failed to connect to MCP server:', error);
       throw error;
     }
   }
@@ -78,15 +87,15 @@ export class MCPClient {
   async disconnect(): Promise<void> {
     try {
       if (this.client && this.isConnected) {
-        console.log('Disconnecting from MCP server...');
+        this.logger.info('Disconnecting from MCP server...');
         await this.client.close();
         this.isConnected = false;
         this.client = null;
         this.transport = null;
-        console.log('Disconnected from MCP server');
+        this.logger.info('Disconnected from MCP server');
       }
     } catch (error) {
-      console.error('Error during disconnect:', error);
+      this.logger.error('Error during disconnect:', error);
       throw error;
     }
   }
@@ -130,7 +139,7 @@ export class MCPClient {
         },
         CallToolResultSchema,
         {
-          timeout: this.config.timeout,
+          timeout: 30000,
         }
       );
       return response as MCPToolCallResult;
@@ -146,7 +155,7 @@ export class MCPClient {
   }
 
   getCommand(): string {
-    return `${this.config.command} ${this.config.args.join(' ')}`;
+    return `${this.command} ${this.args.join(' ')}`;
   }
 
   get connected(): boolean {
