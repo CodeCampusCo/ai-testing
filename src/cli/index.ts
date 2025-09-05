@@ -11,6 +11,7 @@ import { createSimpleTestWorkflow } from '../workflow/simple-workflow.js';
 import { AIProviderConfig } from '../types/workflow.js';
 import { MCPClientConfig } from '../types/mcp.js';
 import dotenv from 'dotenv';
+import { parse as parseYaml } from 'yaml';
 
 const program = new Command();
 
@@ -45,13 +46,10 @@ program
   .alias('r')
   .description('Execute test scenarios')
   .option('-i, --input <description>', 'Test description (generates scenario first)')
-  .option('-f, --file <path>', 'Test scenario file to execute')
+  .option('-p, --project <name>', 'Project directory name from projects/')
+  .option('-f, --file <filename>', 'Test scenario filename (without .md extension)')
   .option('-o, --output <path>', 'Output directory for results')
-  .option('--provider <provider>', 'AI provider (openai|anthropic|google)', 'openai')
-  .option('--model <model>', 'AI model to use')
-  .option('--headless', 'Run browser in headless mode', true)
   .option('--no-headless', 'Run browser in visible mode')
-  .option('--interactive', 'Interactive mode')
   .action(async (options) => {
     try {
       await handleRunCommand(options);
@@ -97,8 +95,8 @@ async function handleGenerateCommand(options: any) {
     input = options.input;
   }
 
-  // Get AI configuration
-  const aiConfig = await getAIConfig(options.provider, options.model);
+  // Get AI configuration (from .env)
+  const aiConfig = await getAIConfig();
   const mcpConfig = getMCPConfig();
 
   // Create workflow
@@ -171,7 +169,7 @@ async function handleRunCommand(options: any) {
   let outputDir = options.output || './test-results';
 
   // Get input (either description or scenario file)
-  if (options.interactive || (!options.input && !options.file)) {
+  if (!options.input && !options.file && !options.project) {
     const { source } = await inquirer.prompt([
       {
         type: 'list',
@@ -212,14 +210,37 @@ async function handleRunCommand(options: any) {
       ]);
       input = await fs.readFile(resolve(filePath), 'utf-8');
     }
+  } else if (options.project && options.file) {
+    // Load from projects directory
+    const projectDir = resolve('projects', options.project);
+    const testFile = join(projectDir, `${options.file}.md`);
+    const configFile = join(projectDir, 'config.yml');
+    
+    try {
+      // Load test file
+      let testContent = await fs.readFile(testFile, 'utf-8');
+      
+      // Load and parse config.yml
+      const configContent = await fs.readFile(configFile, 'utf-8');
+      const config = parseYaml(configContent);
+      
+      // Replace variables in test content
+      input = replaceVariables(testContent, config);
+    } catch (error: any) {
+      if (error.code === 'ENOENT') {
+        throw new Error(`File not found: ${error.path}`);
+      }
+      throw error;
+    }
   } else if (options.file) {
+    // Load directly specified file (backward compatibility)
     input = await fs.readFile(resolve(options.file), 'utf-8');
   } else {
     input = options.input;
   }
 
-  // Get AI configuration
-  const aiConfig = await getAIConfig(options.provider, options.model);
+  // Get AI configuration (from .env)
+  const aiConfig = await getAIConfig();
   const mcpConfig = getMCPConfig();
 
   // Create workflow
@@ -232,6 +253,9 @@ async function handleRunCommand(options: any) {
   // Ensure output directory exists
   await fs.mkdir(resolve(outputDir), { recursive: true });
 
+  // Determine if we should skip scenario generation (file-based input)
+  const skipGeneration = options.project && options.file;
+  
   // Run workflow with streaming updates
   const spinner = ora('Starting test execution...').start();
   
@@ -241,6 +265,9 @@ async function handleRunCommand(options: any) {
         case 'generate':
           spinner.text = '🧠 Generating test scenario...';
           break;
+        case 'parse':
+          spinner.text = '📝 Parsing test scenario...';
+          break;
         case 'execute':
           spinner.text = '🌐 Executing browser automation...';
           break;
@@ -248,7 +275,7 @@ async function handleRunCommand(options: any) {
           spinner.text = '📊 Analyzing results...';
           break;
       }
-    });
+    }, { skipGeneration });
 
     spinner.stop();
 
@@ -281,11 +308,11 @@ async function handleRunCommand(options: any) {
 }
 
 
-async function getAIConfig(provider?: string, model?: string): Promise<AIProviderConfig> {
+async function getAIConfig(): Promise<AIProviderConfig> {
   dotenv.config();
   
   const envConfig = getEnvConfig();
-  const finalProvider = provider || envConfig.provider || 'openai';
+  const finalProvider = envConfig.provider || 'openai';
   
   if (!envConfig.apiKey) {
     throw new Error(`No API key found for ${finalProvider}. Please set AI_API_KEY environment variable or create .env file with API key.`);
@@ -294,7 +321,7 @@ async function getAIConfig(provider?: string, model?: string): Promise<AIProvide
   return {
     provider: finalProvider as AIProviderConfig['provider'],
     apiKey: envConfig.apiKey,
-    model: model || envConfig.model || getDefaultModel(finalProvider),
+    model: envConfig.model || getDefaultModel(finalProvider),
     temperature: 0.1,
     maxTokens: 2000
   };
@@ -335,6 +362,52 @@ function createLogger() {
     warn: (msg: string, ...args: any[]) => console.warn(chalk.yellow(`[WARN] ${msg}`), ...args),
     error: (msg: string, ...args: any[]) => console.error(chalk.red(`[ERROR] ${msg}`), ...args)
   };
+}
+
+function replaceVariables(content: string, config: any): string {
+  let result = content;
+  
+  // Replace {{urls.xxx}} variables
+  if (config.urls) {
+    for (const [key, value] of Object.entries(config.urls)) {
+      const pattern = new RegExp(`\\{\\{urls\\.${key}\\}\\}`, 'g');
+      result = result.replace(pattern, value as string);
+    }
+  }
+  
+  // Replace {{xxx.yyy}} variables from test_data and other root sections
+  for (const [sectionKey, sectionValue] of Object.entries(config)) {
+    if (sectionKey === 'project' || sectionKey === 'browser' || sectionKey === 'execution' || sectionKey === 'reporting') {
+      // Skip system sections
+      continue;
+    }
+    
+    if (typeof sectionValue === 'object' && sectionValue !== null) {
+      for (const [key, value] of Object.entries(sectionValue)) {
+        if (typeof value === 'object' && value !== null) {
+          // Handle nested objects like test_data.valid.username
+          for (const [nestedKey, nestedValue] of Object.entries(value)) {
+            const pattern = new RegExp(`\\{\\{${key}\\.${nestedKey}\\}\\}`, 'g');
+            result = result.replace(pattern, nestedValue as string);
+          }
+        } else {
+          // Handle flat objects like urls.main
+          const pattern = new RegExp(`\\{\\{${sectionKey}\\.${key}\\}\\}`, 'g');
+          result = result.replace(pattern, value as string);
+        }
+      }
+    }
+  }
+  
+  // Replace {{project.xxx}} variables
+  if (config.project) {
+    for (const [key, value] of Object.entries(config.project)) {
+      const pattern = new RegExp(`\\{\\{project\\.${key}\\}\\}`, 'g');
+      result = result.replace(pattern, value as string);
+    }
+  }
+  
+  return result;
 }
 
 function displayTestResults(result: any, resultFile: string) {

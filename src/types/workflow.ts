@@ -5,16 +5,19 @@ export interface TestScenario {
   description: string;
   steps: TestStep[];
   expectedOutcomes: ExpectedOutcome[];
+  rawSteps?: string[]; // Raw step text for AI processing
+  rawOutcomes?: string[]; // Raw outcome text for AI processing  
   metadata?: {
     priority: 'low' | 'medium' | 'high';
-    tags: string[];
+    tags?: string[];
     estimatedDuration?: number;
+    source?: string;
   };
 }
 
 export interface TestStep {
   id: string;
-  action: 'navigate' | 'click' | 'type' | 'wait' | 'verify' | 'screenshot';
+  action: 'navigate' | 'click' | 'type' | 'fill' | 'wait' | 'verify' | 'screenshot' | 'custom';
   target?: string;
   value?: string;
   description: string;
@@ -69,7 +72,7 @@ export interface WorkflowState {
   scenario?: TestScenario;
   executionResult?: TestResult;
   analysis?: TestAnalysis;
-  currentStep: 'generate' | 'execute' | 'analyze' | 'complete';
+  currentStep: 'generate' | 'parse' | 'execute' | 'analyze' | 'complete';
   error?: string;
 }
 
@@ -93,4 +96,16 @@ export interface AIProviderConfig {
   model: string;
   temperature?: number;
   maxTokens?: number;
+}
+
+// MCP Response Types
+export interface MCPContentItem {
+  type: 'text' | 'image';
+  text?: string;
+  data?: string; // base64 data for images
+  mimeType?: string;
+}
+
+export interface MCPResponse {
+  content?: MCPContentItem[];
 }

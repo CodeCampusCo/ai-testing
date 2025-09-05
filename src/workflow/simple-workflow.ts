@@ -27,7 +27,7 @@ export class SimpleTestWorkflow {
     
     // Initialize agents
     this.scenarioAgent = new ScenarioGeneratorAgent(config.aiProvider, this.logger);
-    this.executorAgent = new TestExecutorAgent(config.mcpConfig, this.logger);
+    this.executorAgent = new TestExecutorAgent(config.mcpConfig, config.aiProvider, this.logger);
     this.analysisAgent = new AnalysisAgent(config.aiProvider, this.logger);
   }
 
@@ -40,18 +40,24 @@ export class SimpleTestWorkflow {
     };
   }
 
-  async run(input: string): Promise<WorkflowState> {
+  async run(input: string, options?: { skipGeneration?: boolean }): Promise<WorkflowState> {
     this.logger?.info('Starting test workflow...');
     
     let state: WorkflowState = {
       input,
-      currentStep: 'generate'
+      currentStep: options?.skipGeneration ? 'execute' : 'generate'
     };
 
     try {
-      // Step 1: Generate Scenario
-      state = await this.generateScenario(state);
-      if (state.error) return state;
+      // Step 1: Generate Scenario (skip if input is already structured)
+      if (!options?.skipGeneration) {
+        state = await this.generateScenario(state);
+        if (state.error) return state;
+      } else {
+        // Parse structured input directly into scenario
+        state = await this.parseStructuredInput(state);
+        if (state.error) return state;
+      }
 
       // Step 2: Execute Test  
       state = await this.executeTest(state);
@@ -74,12 +80,12 @@ export class SimpleTestWorkflow {
     }
   }
 
-  async runStreaming(input: string, onUpdate?: (state: WorkflowState) => void): Promise<WorkflowState> {
+  async runStreaming(input: string, onUpdate?: (state: WorkflowState) => void, options?: { skipGeneration?: boolean }): Promise<WorkflowState> {
     this.logger?.info('Starting streaming test workflow...');
     
     let state: WorkflowState = {
       input,
-      currentStep: 'generate'
+      currentStep: options?.skipGeneration ? 'execute' : 'generate'
     };
 
     const updateState = (newState: Partial<WorkflowState>) => {
@@ -91,11 +97,19 @@ export class SimpleTestWorkflow {
     };
 
     try {
-      // Step 1: Generate Scenario
-      updateState({ currentStep: 'generate' });
-      state = await this.generateScenario(state);
-      updateState(state);
-      if (state.error) return state;
+      // Step 1: Generate Scenario (skip if input is already structured)
+      if (!options?.skipGeneration) {
+        updateState({ currentStep: 'generate' });
+        state = await this.generateScenario(state);
+        updateState(state);
+        if (state.error) return state;
+      } else {
+        // Parse structured input directly into scenario
+        updateState({ currentStep: 'parse' });
+        state = await this.parseStructuredInput(state);
+        updateState(state);
+        if (state.error) return state;
+      }
 
       // Step 2: Execute Test  
       updateState({ currentStep: 'execute' });
@@ -281,6 +295,85 @@ export class SimpleTestWorkflow {
       acceptanceCriteria: acceptanceCriteria.length > 0 ? acceptanceCriteria : undefined
     };
   }
+
+  private async parseStructuredInput(state: WorkflowState): Promise<WorkflowState> {
+    this.logger?.info('Parsing structured test input...');
+    
+    try {
+      const scenario = this.parseMarkdownToScenario(state.input);
+      
+      return {
+        ...state,
+        scenario,
+        currentStep: 'execute',
+        error: undefined
+      };
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger?.error(`Input parsing failed: ${errorMessage}`);
+      
+      return {
+        ...state,
+        currentStep: 'complete',
+        error: `Input parsing failed: ${errorMessage}`
+      };
+    }
+  }
+
+  private parseMarkdownToScenario(markdown: string): TestScenario {
+    const lines = markdown.split('\n');
+    
+    // Parse markdown sections - extract raw text only, no hard-coded parsing
+    let description = '';
+    const rawSteps: string[] = [];
+    const rawOutcomes: string[] = [];
+    let currentSection = '';
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      // Section headers
+      if (trimmed.startsWith('# ')) {
+        description = trimmed.substring(2).trim();
+        continue;
+      }
+      
+      if (trimmed.startsWith('## ')) {
+        currentSection = trimmed.substring(3).trim().toLowerCase();
+        continue;
+      }
+      
+      // Collect raw step text (no parsing)
+      if (currentSection === 'test steps' && trimmed.startsWith('- ')) {
+        const stepText = trimmed.substring(2).trim();
+        rawSteps.push(stepText);
+        continue;
+      }
+      
+      // Collect raw outcome text (no parsing)
+      if (currentSection === 'expected results' && trimmed.startsWith('- ')) {
+        const outcomeText = trimmed.substring(2).trim();
+        rawOutcomes.push(outcomeText);
+        continue;
+      }
+    }
+    
+    return {
+      id: `test-${Date.now()}`,
+      description: description || 'Parsed test scenario',
+      steps: [], // Will be populated by AI during execution
+      expectedOutcomes: [], // Will be populated by AI during execution
+      rawSteps, // Store raw text for AI processing
+      rawOutcomes, // Store raw text for AI processing
+      metadata: {
+        priority: 'medium',
+        estimatedDuration: rawSteps.length * 3000, // 3s per step estimate (AI processing)
+        source: 'file'
+      }
+    };
+  }
+
 }
 
 // Export utility function to create workflow  

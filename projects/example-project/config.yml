@@ -1,48 +1,26 @@
 project:
-  name: "example-project"
-  description: "Example project for AI E2E Test Framework"
-  base_url: "https://example.com"
+  name: 'example-project'
+  description: 'Example project for AI E2E Test Framework'
   timeout: 30000
 
 browser:
-  type: "chromium"
+  type: 'chromium'
   headless: true
   viewport:
     width: 1280
     height: 720
 
-authentication:
-  method: "form"
-  username: "${TEST_USERNAME}"
-  password: "${TEST_PASSWORD}"
-  login_url: "/login"
-  success_indicator: ".dashboard"
+urls:
+  main: 'http://localhost:3000'
 
 test_data:
-  users:
-    test_user:
-      email: "test@example.com"
-      password: "password123"
-      name: "Test User"
-  
-  products:
-    sample_product:
-      name: "Sample Product"
-      price: 29.99
-      category: "Electronics"
+  valid:
+    username: 'test@example.com'
+    password: 'password123'
 
-environments:
-  development:
-    base_url: "http://localhost:3000"
-    debug: true
-  
-  staging:
-    base_url: "https://staging.example.com" 
-    debug: false
-  
-  production:
-    base_url: "https://example.com"
-    debug: false
+  invalid:
+    username: 'wrong@example.com'
+    password: 'wrongpass'
 
 execution:
   retry_count: 3
@@ -50,7 +28,7 @@ execution:
   screenshot_on_failure: true
 
 reporting:
-  format: ["json", "html"]
-  output_dir: "./test-results"
+  format: ['json', 'html']
+  output_dir: './test-results'
   include_screenshots: true
   include_accessibility: true
