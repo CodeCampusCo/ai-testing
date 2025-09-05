@@ -4,6 +4,7 @@ import { MCPClientConfig } from '../types/mcp.js';
 import { ScenarioGeneratorAgent } from '../agents/scenario-generator.js';
 import { TestExecutorAgent } from '../agents/test-executor.js';
 import { AnalysisAgent } from '../agents/analysis-agent.js';
+import { StepProgressManager } from '../ui/step-progress.js';
 
 export interface SimpleTestWorkflowConfig {
   aiProvider: AIProviderConfig;
@@ -14,6 +15,7 @@ export interface SimpleTestWorkflowConfig {
     warn: (msg: string, ...args: any[]) => void;
     error: (msg: string, ...args: any[]) => void;
   };
+  progressManager?: StepProgressManager;
 }
 
 export class SimpleTestWorkflow {
@@ -27,7 +29,7 @@ export class SimpleTestWorkflow {
     
     // Initialize agents
     this.scenarioAgent = new ScenarioGeneratorAgent(config.aiProvider, this.logger);
-    this.executorAgent = new TestExecutorAgent(config.mcpConfig, config.aiProvider, this.logger);
+    this.executorAgent = new TestExecutorAgent(config.mcpConfig, config.aiProvider, this.logger, config.progressManager);
     this.analysisAgent = new AnalysisAgent(config.aiProvider, this.logger);
   }
 

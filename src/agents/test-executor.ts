@@ -3,6 +3,7 @@ import { TestScenario, TestResult, StepResult, AccessibilityReport, AIProviderCo
 import { PlaywrightMCPClient } from '../mcp/browser.js';
 import { MCPClientConfig, ElementInfo } from '../types/mcp.js';
 import { LangChainAIService } from '../ai/langchain-service.js';
+import { StepProgressManager } from '../ui/step-progress.js';
 import { promises as fs } from 'fs';
 import { resolve, join } from 'path';
 
@@ -21,9 +22,10 @@ export class TestExecutorAgent implements BaseAgent<TestScenario, TestResult> {
       info: (msg: string, ...args: any[]) => void;
       warn: (msg: string, ...args: any[]) => void;
       error: (msg: string, ...args: any[]) => void;
-    }
+    },
+    private progressManager?: StepProgressManager
   ) {
-    this.browser = new PlaywrightMCPClient(mcpConfig);
+    this.browser = new PlaywrightMCPClient(mcpConfig, logger);
     this.aiService = new LangChainAIService(aiConfig, logger);
   }
 
@@ -111,6 +113,9 @@ export class TestExecutorAgent implements BaseAgent<TestScenario, TestResult> {
       } catch (error) {
         this.logger.warn(`Browser disconnect error: ${error}`);
       }
+      
+      // Finish step progress and show summary
+      this.progressManager?.finish();
     }
 
     this.logger.info(
@@ -493,6 +498,9 @@ export class TestExecutorAgent implements BaseAgent<TestScenario, TestResult> {
       const step = rawSteps[i];
       const stepStart = Date.now();
       
+      // Start progress for this step
+      this.progressManager?.startStep(step || `Step ${i + 1}`);
+      
       this.logger.debug(`Executing raw step ${i + 1}: ${step}`);
 
       const stepResult: StepResult = {
@@ -536,11 +544,19 @@ export class TestExecutorAgent implements BaseAgent<TestScenario, TestResult> {
         // Log performance breakdown for analysis
         this.logger.debug(`Step ${i + 1} performance: AI=${aiDuration}ms, MCP=${mcpDuration}ms, Snapshot=${snapshotDuration}ms`);
 
+        // Mark step as successful
+        const stepDuration = Date.now() - stepStart;
+        this.progressManager?.succeedStep(stepDuration);
+
       } catch (error) {
         stepResult.status = 'failed';
         stepResult.error = error instanceof Error ? error.message : String(error);
         this.logger.error(`Raw step ${i + 1} failed: ${stepResult.error}`);
         result.status = 'failed';
+        
+        // Mark step as failed
+        const stepDuration = Date.now() - stepStart;
+        this.progressManager?.failStep(stepResult.error, stepDuration);
         
         // Capture screenshot on failure
         this.logger.info(`Attempting to capture screenshot on step failure...`);

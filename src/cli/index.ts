@@ -10,6 +10,7 @@ import { join, resolve } from 'path';
 import { createSimpleTestWorkflow } from '../workflow/simple-workflow.js';
 import { AIProviderConfig } from '../types/workflow.js';
 import { MCPClientConfig } from '../types/mcp.js';
+import { StepProgressManager } from '../ui/step-progress.js';
 import dotenv from 'dotenv';
 import { parse as parseYaml } from 'yaml';
 
@@ -31,6 +32,7 @@ program
   .option('--provider <provider>', 'AI provider (openai|anthropic|google)', 'openai')
   .option('--model <model>', 'AI model to use')
   .option('--interactive', 'Interactive mode')
+  .option('-v, --verbose', 'Enable detailed debug logging')
   .action(async (options) => {
     try {
       await handleGenerateCommand(options);
@@ -51,6 +53,7 @@ program
   .option('-o, --output <path>', 'Output directory for results')
   .option('--no-headless', 'Run browser in visible mode')
   .option('--no-clean-state', 'Disable browser state cleanup before test execution')
+  .option('-v, --verbose', 'Enable detailed debug logging')
   .action(async (options) => {
     try {
       await handleRunCommand(options);
@@ -104,7 +107,7 @@ async function handleGenerateCommand(options: any) {
   const workflow = createSimpleTestWorkflow({
     aiProvider: aiConfig,
     mcpConfig,
-    logger: createLogger()
+    logger: createLogger(options.verbose)
   });
 
   // Generate scenario
@@ -244,11 +247,15 @@ async function handleRunCommand(options: any) {
   const aiConfig = await getAIConfig();
   const mcpConfig = getMCPConfig(options);
 
+  // Create progress manager
+  const progressManager = new StepProgressManager(10, options.verbose); // Estimate 10 steps
+
   // Create workflow
   const workflow = createSimpleTestWorkflow({
     aiProvider: aiConfig,
     mcpConfig,
-    logger: createLogger()
+    logger: createLogger(options.verbose),
+    progressManager
   });
 
   // Ensure output directory exists
@@ -270,15 +277,20 @@ async function handleRunCommand(options: any) {
           spinner.text = '📝 Parsing test scenario...';
           break;
         case 'execute':
-          spinner.text = '🌐 Executing browser automation...';
+          spinner.stop();
           break;
         case 'analyze':
-          spinner.text = '📊 Analyzing results...';
+          if (!spinner.isSpinning) {
+            spinner.start('📊 Analyzing results...');
+          } else {
+            spinner.text = '📊 Analyzing results...';
+          }
           break;
       }
     }, { skipGeneration });
 
     spinner.stop();
+    progressManager.finish();
 
     if (result.error) {
       console.error(chalk.red(`Test execution failed: ${result.error}`));
@@ -304,6 +316,7 @@ async function handleRunCommand(options: any) {
 
   } catch (error) {
     spinner.fail('Test execution failed');
+    progressManager.finish();
     throw error;
   }
 }
@@ -357,10 +370,14 @@ function getMCPConfig(options?: any): MCPClientConfig {
   };
 }
 
-function createLogger() {
+function createLogger(verbose = false) {
   return {
-    debug: (msg: string, ...args: any[]) => console.log(chalk.gray(`[DEBUG] ${msg}`), ...args),
-    info: (msg: string, ...args: any[]) => console.log(chalk.blue(`[INFO] ${msg}`), ...args),
+    debug: verbose 
+      ? (msg: string, ...args: any[]) => console.log(chalk.gray(`[DEBUG] ${msg}`), ...args)
+      : () => {}, // No-op when not verbose
+    info: verbose 
+      ? (msg: string, ...args: any[]) => console.log(chalk.blue(`[INFO] ${msg}`), ...args)
+      : () => {}, // No-op when not verbose
     warn: (msg: string, ...args: any[]) => console.warn(chalk.yellow(`[WARN] ${msg}`), ...args),
     error: (msg: string, ...args: any[]) => console.error(chalk.red(`[ERROR] ${msg}`), ...args)
   };

@@ -106,15 +106,15 @@ export class MCPClient {
     }
 
     try {
-      console.log('Listing available tools...');
+      this.logger.debug('Listing available tools...');
       const response = await this.client.request(
         { method: 'tools/list', params: undefined },
         ListToolsResultSchema
       );
-      console.log(`Found ${(response as any).tools?.length || 0} tools`);
+      this.logger.debug(`Found ${(response as any).tools?.length || 0} tools`);
       return response as MCPToolCallResult;
     } catch (error) {
-      console.error('Failed to list tools:', error);
+      this.logger.error('Failed to list tools:', error);
       throw error;
     }
   }
@@ -128,7 +128,7 @@ export class MCPClient {
     }
 
     try {
-      console.log(`Calling tool: ${name} with arguments:`, arguments_);
+      this.logger.debug(`Calling tool: ${name} with arguments:`, arguments_);
       const response = await this.client.request(
         {
           method: 'tools/call',
@@ -144,7 +144,7 @@ export class MCPClient {
       );
       return response as MCPToolCallResult;
     } catch (error) {
-      console.error(`Failed to call tool '${name}':`, error);
+      this.logger.error(`Failed to call tool '${name}':`, error);
       throw error;
     }
   }

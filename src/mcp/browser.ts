@@ -9,11 +9,11 @@ export class PlaywrightMCPClient {
   private mcpClient: MCPClient;
   private _currentUrl: string | null = null;
   private availableTools: any[] = [];
-  private logger = {
-    debug: (msg: string, ...args: any[]) => console.log(`[DEBUG] ${msg}`, ...args),
-    info: (msg: string, ...args: any[]) => console.log(`[INFO] ${msg}`, ...args),
-    warn: (msg: string, ...args: any[]) => console.warn(`[WARN] ${msg}`, ...args),
-    error: (msg: string, ...args: any[]) => console.error(`[ERROR] ${msg}`, ...args)
+  private logger: {
+    debug: (msg: string, ...args: any[]) => void;
+    info: (msg: string, ...args: any[]) => void;
+    warn: (msg: string, ...args: any[]) => void;
+    error: (msg: string, ...args: any[]) => void;
   };
 
   constructor(
@@ -23,8 +23,21 @@ export class PlaywrightMCPClient {
       timeout: 30000,
       retries: 3,
       retryDelay: 1000
+    },
+    logger?: {
+      debug: (msg: string, ...args: any[]) => void;
+      info: (msg: string, ...args: any[]) => void;
+      warn: (msg: string, ...args: any[]) => void;
+      error: (msg: string, ...args: any[]) => void;
     }
   ) {
+    this.logger = logger || {
+      debug: (msg: string, ...args: any[]) => console.log(`[DEBUG] ${msg}`, ...args),
+      info: (msg: string, ...args: any[]) => console.log(`[INFO] ${msg}`, ...args),
+      warn: (msg: string, ...args: any[]) => console.warn(`[WARN] ${msg}`, ...args),
+      error: (msg: string, ...args: any[]) => console.error(`[ERROR] ${msg}`, ...args)
+    };
+
     this.mcpClient = new MCPClient(
       mcpConfig.command || 'npx',
       mcpConfig.args || ['@playwright/mcp@latest'],
@@ -39,7 +52,7 @@ export class PlaywrightMCPClient {
     const toolsResult = await this.mcpClient.listTools();
     if (toolsResult && (toolsResult as any).tools) {
       this.availableTools = (toolsResult as any).tools;
-      console.log(`Loaded ${this.availableTools.length} available tools`);
+      this.logger.debug(`Loaded ${this.availableTools.length} available tools`);
     }
   }
 
@@ -52,7 +65,7 @@ export class PlaywrightMCPClient {
    */
   async callTool(toolName: string, params: Record<string, unknown> = {}): Promise<any> {
     try {
-      console.log(`Calling MCP tool: ${toolName}`, params);
+      this.logger.debug(`Calling MCP tool: ${toolName}`, params);
       const result = await this.mcpClient.callTool(toolName, params);
       
       // Update current URL if this was a navigation
@@ -62,7 +75,7 @@ export class PlaywrightMCPClient {
       
       return result;
     } catch (error) {
-      console.error(`MCP tool call failed: ${toolName}`, error);
+      this.logger.error(`MCP tool call failed: ${toolName}`, error);
       throw error;
     }
   }
@@ -120,7 +133,7 @@ export class PlaywrightMCPClient {
         rawYaml
       };
     } catch (error) {
-      console.error('Failed to get accessibility snapshot:', error);
+      this.logger.error('Failed to get accessibility snapshot:', error);
       return {
         elements: [],
         rawYaml: ''

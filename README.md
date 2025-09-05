@@ -28,6 +28,9 @@ ai-e2e-test run -i "Test Google search functionality"
 
 # Run from existing scenario file
 ai-e2e-test run -f ./my-test-scenario.json
+
+# Run with verbose debugging
+ai-e2e-test run -i "Test login" --verbose
 ```
 
 ## ✨ Key Features
@@ -37,7 +40,8 @@ ai-e2e-test run -f ./my-test-scenario.json
 - **🎯 Multi-Provider AI**: OpenAI, Anthropic, Google AI support with automatic failover
 - **📊 Intelligent Analysis**: AI-powered result analysis with actionable insights
 - **🛡️ Accessibility-First**: Built-in accessibility scoring and issue detection
-- **🚀 Production CLI**: Complete command suite with streaming progress updates
+- **🚀 Production CLI**: Complete command suite with real-time step progress
+- **🎨 Visual Feedback**: Professional spinners, status icons (✅/❌), and duration tracking
 - **🔄 CI/CD Ready**: Headless execution with comprehensive JSON reporting
 
 ## 🏗️ Architecture
