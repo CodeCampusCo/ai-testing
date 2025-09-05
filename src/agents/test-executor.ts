@@ -14,7 +14,7 @@ export class TestExecutorAgent implements BaseAgent<TestScenario, TestResult> {
   private aiService: LangChainAIService;
 
   constructor(
-    mcpConfig: MCPClientConfig,
+    private mcpConfig: MCPClientConfig,
     aiConfig: AIProviderConfig,
     private logger: {
       debug: (msg: string, ...args: any[]) => void;
@@ -44,6 +44,14 @@ export class TestExecutorAgent implements BaseAgent<TestScenario, TestResult> {
     try {
       await this.browser.connect();
       this.logger.debug('Browser connected successfully');
+
+      // Clear browser state for clean test execution (if enabled)
+      if (this.mcpConfig.cleanState !== false) { // Default to true unless explicitly disabled
+        await this.browser.clearBrowserState();
+        this.logger.debug('Browser state cleared for clean test execution');
+      } else {
+        this.logger.debug('Browser state cleanup disabled via configuration');
+      }
 
       // Execute using raw steps (AI-guided execution)
       if (input.rawSteps && input.rawSteps.length > 0) {

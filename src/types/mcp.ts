@@ -42,5 +42,6 @@ export interface MCPClientConfig {
   timeout: number;
   retries: number;
   retryDelay: number;
+  cleanState?: boolean; // Enable/disable browser state cleanup before tests
 }
 

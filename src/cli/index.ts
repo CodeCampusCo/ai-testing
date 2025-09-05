@@ -50,6 +50,7 @@ program
   .option('-f, --file <filename>', 'Test scenario filename (without .md extension)')
   .option('-o, --output <path>', 'Output directory for results')
   .option('--no-headless', 'Run browser in visible mode')
+  .option('--no-clean-state', 'Disable browser state cleanup before test execution')
   .action(async (options) => {
     try {
       await handleRunCommand(options);
@@ -97,7 +98,7 @@ async function handleGenerateCommand(options: any) {
 
   // Get AI configuration (from .env)
   const aiConfig = await getAIConfig();
-  const mcpConfig = getMCPConfig();
+  const mcpConfig = getMCPConfig(options);
 
   // Create workflow
   const workflow = createSimpleTestWorkflow({
@@ -241,7 +242,7 @@ async function handleRunCommand(options: any) {
 
   // Get AI configuration (from .env)
   const aiConfig = await getAIConfig();
-  const mcpConfig = getMCPConfig();
+  const mcpConfig = getMCPConfig(options);
 
   // Create workflow
   const workflow = createSimpleTestWorkflow({
@@ -345,13 +346,14 @@ function getDefaultModel(provider: string): string {
 }
 
 
-function getMCPConfig(): MCPClientConfig {
+function getMCPConfig(options?: any): MCPClientConfig {
   return {
     command: 'npx',
     args: ['@playwright/mcp@latest'],
     timeout: 30000,
     retries: 3,
-    retryDelay: 1000
+    retryDelay: 1000,
+    cleanState: options?.cleanState !== false // Default to true, unless --no-clean-state is specified
   };
 }
 

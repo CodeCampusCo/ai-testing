@@ -211,4 +211,43 @@ export class PlaywrightMCPClient {
   get isConnected(): boolean {
     return this.mcpClient.isClientConnected();
   }
+
+  /**
+   * Clear all browser storage for clean test state
+   * Uses browser_evaluate to run JavaScript in browser context
+   */
+  async clearBrowserState(): Promise<void> {
+    const cleanupScript = `() => {
+      // Clear all browser storage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Clear cookies
+      document.cookie.split(";").forEach(function(c) { 
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+      });
+      
+      // Clear IndexedDB
+      if ('indexedDB' in window) {
+        indexedDB.databases().then(databases => {
+          databases.forEach(db => {
+            indexedDB.deleteDatabase(db.name);
+          });
+        });
+      }
+      
+      console.log("Browser storage cleared: localStorage, sessionStorage, cookies, and IndexedDB");
+      return "Storage cleared successfully";
+    }`;
+
+    try {
+      this.logger.debug('Clearing browser storage for clean test state...');
+      const result = await this.callTool('browser_evaluate', { function: cleanupScript });
+      this.logger.info('Browser state cleared successfully');
+      return result;
+    } catch (error) {
+      this.logger.error('Failed to clear browser state:', error);
+      throw error;
+    }
+  }
 }
