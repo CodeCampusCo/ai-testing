@@ -1,5 +1,6 @@
 import { AIAgent, AgentError } from './base.js';
-import { TestScenario, TestStep, ExpectedOutcome, AIProviderConfig } from '../types/workflow.js';
+import { TestScenario, TestStep, ExpectedOutcome } from '../types/workflow.js';
+import { LangChainAIService } from '../ai/langchain-service.js';
 
 interface ScenarioGeneratorInput {
   description: string;
@@ -12,11 +13,8 @@ export class ScenarioGeneratorAgent extends AIAgent<ScenarioGeneratorInput, Test
   name = 'ScenarioGenerator';
   description = 'Converts natural language descriptions into structured test scenarios';
 
-  constructor(
-    config: AIProviderConfig,
-    logger: any
-  ) {
-    super(config, logger);
+  constructor(aiService: LangChainAIService, logger: any) {
+    super(aiService, logger);
   }
 
   async process(input: ScenarioGeneratorInput): Promise<TestScenario> {
@@ -25,15 +23,14 @@ export class ScenarioGeneratorAgent extends AIAgent<ScenarioGeneratorInput, Test
     try {
       const systemPrompt = this.buildSystemPrompt();
       const userPrompt = this.buildUserPrompt(input);
-      
+
       const response = await this.callAI(userPrompt, systemPrompt);
       const parsedScenario = this.parseJSON<any>(response);
-      
+
       const scenario = this.validateAndNormalize(parsedScenario, input);
-      
+
       this.logger.info(`Generated scenario "${scenario.id}" with ${scenario.steps.length} steps`);
       return scenario;
-      
     } catch (error) {
       throw new AgentError(
         `Failed to generate test scenario: ${error instanceof Error ? error.message : error}`,
@@ -98,24 +95,24 @@ Available actions:
   private buildUserPrompt(input: ScenarioGeneratorInput): string {
     let prompt = `Generate a comprehensive test scenario for:\n\n`;
     prompt += `Description: ${input.description}\n`;
-    
+
     if (input.url) {
       prompt += `Target URL: ${input.url}\n`;
     }
-    
+
     if (input.userStory) {
       prompt += `User Story: ${input.userStory}\n`;
     }
-    
+
     if (input.acceptanceCriteria && input.acceptanceCriteria.length > 0) {
       prompt += `Acceptance Criteria:\n`;
       input.acceptanceCriteria.forEach((criteria, index) => {
         prompt += `${index + 1}. ${criteria}\n`;
       });
     }
-    
+
     prompt += `\nCreate detailed test steps that cover the main flow and important edge cases. Focus on accessibility and user experience.`;
-    
+
     return prompt;
   }
 
@@ -124,15 +121,15 @@ Available actions:
     if (!parsed.id) {
       parsed.id = this.generateTestId(input.description);
     }
-    
+
     if (!parsed.description) {
       parsed.description = input.description;
     }
-    
+
     if (!Array.isArray(parsed.steps)) {
       throw new Error('Steps must be an array');
     }
-    
+
     if (!Array.isArray(parsed.expectedOutcomes)) {
       parsed.expectedOutcomes = [];
     }
@@ -144,7 +141,7 @@ Available actions:
       target: step.target || '',
       value: step.value || '',
       description: step.description || `Step ${index + 1}`,
-      timeout: typeof step.timeout === 'number' ? step.timeout : 5000
+      timeout: typeof step.timeout === 'number' ? step.timeout : 5000,
     }));
 
     // Validate and normalize expected outcomes
@@ -153,7 +150,7 @@ Available actions:
       type: this.validateOutcomeType(outcome.type),
       target: outcome.target || '',
       value: outcome.value || '',
-      description: outcome.description || `Expected outcome ${index + 1}`
+      description: outcome.description || `Expected outcome ${index + 1}`,
     }));
 
     // Normalize metadata
@@ -163,16 +160,24 @@ Available actions:
     parsed.metadata = {
       priority: parsed.metadata.priority || 'medium',
       tags: Array.isArray(parsed.metadata.tags) ? parsed.metadata.tags : [],
-      estimatedDuration: typeof parsed.metadata.estimatedDuration === 'number' 
-        ? parsed.metadata.estimatedDuration 
-        : parsed.steps.length * 5000
+      estimatedDuration:
+        typeof parsed.metadata.estimatedDuration === 'number'
+          ? parsed.metadata.estimatedDuration
+          : parsed.steps.length * 5000,
     };
 
     return parsed as TestScenario;
   }
 
   private validateAction(action: string): TestStep['action'] {
-    const validActions: TestStep['action'][] = ['navigate', 'click', 'type', 'wait', 'verify', 'screenshot'];
+    const validActions: TestStep['action'][] = [
+      'navigate',
+      'click',
+      'type',
+      'wait',
+      'verify',
+      'screenshot',
+    ];
     if (validActions.includes(action as TestStep['action'])) {
       return action as TestStep['action'];
     }
@@ -180,7 +185,13 @@ Available actions:
   }
 
   private validateOutcomeType(type: string): ExpectedOutcome['type'] {
-    const validTypes: ExpectedOutcome['type'][] = ['element_exists', 'text_contains', 'url_matches', 'page_title', 'custom'];
+    const validTypes: ExpectedOutcome['type'][] = [
+      'element_exists',
+      'text_contains',
+      'url_matches',
+      'page_title',
+      'custom',
+    ];
     if (validTypes.includes(type as ExpectedOutcome['type'])) {
       return type as ExpectedOutcome['type'];
     }
@@ -188,10 +199,14 @@ Available actions:
   }
 
   private generateTestId(description: string): string {
-    return description
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
-      .replace(/\s+/g, '-')
-      .substring(0, 50) + '-' + Date.now().toString(36);
+    return (
+      description
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, '-')
+        .substring(0, 50) +
+      '-' +
+      Date.now().toString(36)
+    );
   }
 }

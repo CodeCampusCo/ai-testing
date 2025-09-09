@@ -1,5 +1,6 @@
 import { AIAgent, AgentError } from './base.js';
-import { TestResult, TestAnalysis, TestScenario, AIProviderConfig } from '../types/workflow.js';
+import { TestResult, TestAnalysis, TestScenario } from '../types/workflow.js';
+import { LangChainAIService } from '../ai/langchain-service.js';
 
 interface AnalysisInput {
   scenario: TestScenario;
@@ -10,11 +11,8 @@ export class AnalysisAgent extends AIAgent<AnalysisInput, TestAnalysis> {
   name = 'TestAnalysis';
   description = 'Analyzes test results and provides insights and recommendations';
 
-  constructor(
-    config: AIProviderConfig,
-    logger: any
-  ) {
-    super(config, logger);
+  constructor(aiService: LangChainAIService, logger: any) {
+    super(aiService, logger);
   }
 
   async process(input: AnalysisInput): Promise<TestAnalysis> {
@@ -23,10 +21,10 @@ export class AnalysisAgent extends AIAgent<AnalysisInput, TestAnalysis> {
     try {
       // Generate basic analysis
       const basicAnalysis = this.generateBasicAnalysis(input);
-      
+
       // Use AI for detailed insights
       const aiInsights = await this.generateAIInsights(input, basicAnalysis);
-      
+
       const analysis: TestAnalysis = {
         summary: aiInsights.summary,
         passed: basicAnalysis.passed ?? false,
@@ -34,18 +32,17 @@ export class AnalysisAgent extends AIAgent<AnalysisInput, TestAnalysis> {
         suggestions: aiInsights.suggestions,
         performanceMetrics: basicAnalysis.performanceMetrics ?? {
           totalDuration: 0,
-          averageStepDuration: 0
+          averageStepDuration: 0,
         },
-        accessibilityScore: basicAnalysis.accessibilityScore ?? 0
+        accessibilityScore: basicAnalysis.accessibilityScore ?? 0,
       };
 
       this.logger.info(
         `Analysis complete: ${analysis.passed ? 'PASSED' : 'FAILED'} ` +
-        `(${analysis.issues.length} issues, accessibility: ${analysis.accessibilityScore}%)`
+          `(${analysis.issues.length} issues, accessibility: ${analysis.accessibilityScore}%)`
       );
 
       return analysis;
-
     } catch (error) {
       throw new AgentError(
         `Failed to analyze test results: ${error instanceof Error ? error.message : error}`,
@@ -57,13 +54,12 @@ export class AnalysisAgent extends AIAgent<AnalysisInput, TestAnalysis> {
 
   private generateBasicAnalysis(input: AnalysisInput): Partial<TestAnalysis> {
     const { result } = input;
-    
+
     // Calculate performance metrics
     const performanceMetrics = {
       totalDuration: result.duration,
-      averageStepDuration: result.steps.length > 0 ? 
-        result.duration / result.steps.length : 0,
-      slowestStep: this.findSlowestStep(result)
+      averageStepDuration: result.steps.length > 0 ? result.duration / result.steps.length : 0,
+      slowestStep: this.findSlowestStep(result),
     };
 
     // Calculate accessibility score
@@ -71,7 +67,7 @@ export class AnalysisAgent extends AIAgent<AnalysisInput, TestAnalysis> {
 
     // Identify issues
     const issues: string[] = [];
-    
+
     if (result.status === 'failed') {
       issues.push(`Test failed: ${result.error || 'Unknown error'}`);
     }
@@ -105,7 +101,7 @@ export class AnalysisAgent extends AIAgent<AnalysisInput, TestAnalysis> {
       passed: result.status === 'passed',
       issues,
       performanceMetrics,
-      accessibilityScore
+      accessibilityScore,
     };
   }
 
@@ -115,7 +111,7 @@ export class AnalysisAgent extends AIAgent<AnalysisInput, TestAnalysis> {
   ): Promise<Pick<TestAnalysis, 'summary' | 'suggestions'>> {
     const systemPrompt = this.buildSystemPrompt();
     const userPrompt = this.buildUserPrompt(input, basicAnalysis);
-    
+
     const response = await this.callAI(userPrompt, systemPrompt);
     const insights = this.parseJSON<{
       summary: string;
@@ -124,7 +120,7 @@ export class AnalysisAgent extends AIAgent<AnalysisInput, TestAnalysis> {
 
     return {
       summary: insights.summary || 'Analysis completed',
-      suggestions: Array.isArray(insights.suggestions) ? insights.suggestions : []
+      suggestions: Array.isArray(insights.suggestions) ? insights.suggestions : [],
     };
   }
 
@@ -152,32 +148,29 @@ Guidelines for analysis:
 Keep suggestions practical and implementable.`;
   }
 
-  private buildUserPrompt(
-    input: AnalysisInput,
-    basicAnalysis: Partial<TestAnalysis>
-  ): string {
+  private buildUserPrompt(input: AnalysisInput, basicAnalysis: Partial<TestAnalysis>): string {
     const { scenario, result } = input;
-    
+
     let prompt = `Analyze this test execution:\n\n`;
-    
+
     // Test scenario info
     prompt += `**Test Scenario:**\n`;
     prompt += `- ID: ${scenario.id}\n`;
     prompt += `- Description: ${scenario.description}\n`;
     prompt += `- Steps: ${scenario.steps.length}\n`;
     prompt += `- Priority: ${scenario.metadata?.priority || 'unknown'}\n\n`;
-    
+
     // Execution results
     prompt += `**Execution Results:**\n`;
     prompt += `- Status: ${result.status}\n`;
     prompt += `- Duration: ${result.duration}ms\n`;
     prompt += `- Steps executed: ${result.steps.length}\n`;
     prompt += `- Screenshots taken: ${result.screenshots.length}\n`;
-    
+
     if (result.error) {
       prompt += `- Error: ${result.error}\n`;
     }
-    
+
     // Step details
     prompt += `\n**Step Results:**\n`;
     result.steps.forEach((step, index) => {
@@ -187,7 +180,7 @@ Keep suggestions practical and implementable.`;
       }
       prompt += `\n`;
     });
-    
+
     // Performance metrics
     if (basicAnalysis.performanceMetrics) {
       prompt += `\n**Performance:**\n`;
@@ -197,7 +190,7 @@ Keep suggestions practical and implementable.`;
         prompt += `- Slowest step: ${basicAnalysis.performanceMetrics.slowestStep}\n`;
       }
     }
-    
+
     // Accessibility info
     if (result.accessibility) {
       prompt += `\n**Accessibility:**\n`;
@@ -210,7 +203,7 @@ Keep suggestions practical and implementable.`;
         });
       }
     }
-    
+
     // Issues summary
     if (basicAnalysis.issues && basicAnalysis.issues.length > 0) {
       prompt += `\n**Identified Issues:**\n`;
@@ -218,32 +211,32 @@ Keep suggestions practical and implementable.`;
         prompt += `${index + 1}. ${issue}\n`;
       });
     }
-    
+
     prompt += `\nProvide a comprehensive analysis with specific, actionable recommendations for improving this test and the application being tested.`;
-    
+
     return prompt;
   }
 
   private findSlowestStep(result: TestResult): string | undefined {
     if (result.steps.length === 0) return undefined;
-    
-    const slowest = result.steps.reduce((prev, current) => 
+
+    const slowest = result.steps.reduce((prev, current) =>
       prev.duration > current.duration ? prev : current
     );
-    
+
     return `${slowest.stepId} (${slowest.duration}ms)`;
   }
 
   private calculateAccessibilityScore(result: TestResult): number {
     if (!result.accessibility) return 0;
-    
+
     const { elementsFound, interactableElements, issues } = result.accessibility;
-    
+
     if (elementsFound === 0) return 0;
-    
+
     // Base score
     let score = 100;
-    
+
     // Deduct points for issues
     issues.forEach(issue => {
       switch (issue.severity) {
@@ -258,7 +251,7 @@ Keep suggestions practical and implementable.`;
           break;
       }
     });
-    
+
     // Bonus for good interactable element coverage
     if (interactableElements > 0) {
       const interactableRatio = interactableElements / elementsFound;
@@ -266,7 +259,7 @@ Keep suggestions practical and implementable.`;
         score += 5; // Bonus for having good interactive content
       }
     }
-    
+
     return Math.max(0, Math.min(100, score));
   }
 }

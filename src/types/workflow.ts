@@ -6,7 +6,7 @@ export interface TestScenario {
   steps: TestStep[];
   expectedOutcomes: ExpectedOutcome[];
   rawSteps?: string[]; // Raw step text for AI processing
-  rawOutcomes?: string[]; // Raw outcome text for AI processing  
+  rawOutcomes?: string[]; // Raw outcome text for AI processing
   metadata?: {
     priority: 'low' | 'medium' | 'high';
     tags?: string[];
@@ -46,6 +46,7 @@ export interface TestResult {
 
 export interface StepResult {
   stepId: string;
+  description: string; // The original natural language step
   status: 'passed' | 'failed' | 'skipped';
   duration: number;
   error?: string;

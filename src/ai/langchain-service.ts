@@ -7,14 +7,14 @@ import { AIProviderConfig } from '../types/workflow.js';
 // Schemas for structured outputs
 export const MCPCallSchema = z.object({
   tool: z.string(),
-  args: z.record(z.any())
+  args: z.record(z.any()),
 });
 
 export const MCPCallsSchema = z.array(MCPCallSchema);
 
 export const VerificationResultSchema = z.object({
   result: z.boolean(),
-  reasoning: z.string().optional()
+  reasoning: z.string().optional(),
 });
 
 // LangChain-based AI Service
@@ -32,10 +32,11 @@ export class LangChainAIService {
     }
   ) {
     this.logger = logger;
-    this.initializeModel();
   }
 
-  private async initializeModel() {
+  async initialize() {
+    if (this.model) return; // Already initialized
+    this.logger.debug(`Initializing AI model for provider: ${this.config.provider}`);
     try {
       switch (this.config.provider) {
         case 'openai':
@@ -76,7 +77,10 @@ export class LangChainAIService {
   }
 
   // Generate MCP commands from test step
-  async generateMCPCommands(step: string, context: any): Promise<Array<{tool: string, args: any}>> {
+  async generateMCPCommands(
+    step: string,
+    context: any
+  ): Promise<Array<{ tool: string; args: any }>> {
     const prompt = ChatPromptTemplate.fromTemplate(`
 You are an expert E2E testing assistant. Convert the following test step into MCP tool calls.
 
@@ -90,13 +94,11 @@ Available MCP Tools:
 {availableTools}
 
 Guidelines:
-- Convert the step into specific, actionable MCP tool calls
-- Use appropriate selectors for web elements
-- Include proper error handling
-- For navigation, use browser_navigate
-- For typing, use browser_type with proper selectors
-- For clicking, use browser_click with element identifiers
-- For verification, use browser_snapshot to get page state
+- Convert the step into one or more specific, actionable MCP tool calls.
+- Use the "ref" from the page elements for actions like click and type.
+- **CRITICAL RULE:** After any 'browser_navigate' call or a 'browser_click' call that likely causes a page transition (e.g., clicking 'Login', 'Submit', or a major link), you MUST follow it with a 'browser_wait_for' call.
+- Intelligently decide what to wait for. Look at the user's instruction to predict what should appear next. For example, if the step is "Click 'Sign in' button", the subsequent wait should be for an element on the dashboard, like "Welcome" text or a "Logout" button.
+- If the user step is just "Wait for URL to be /", you should use the 'browser_wait_for' tool and wait for a piece of text you expect to see on the home page.
 
 Respond with a JSON array of tool calls in this format:
 [{{"tool": "tool_name", "args": {{"param": "value"}}}}]
@@ -107,21 +109,25 @@ Respond with a JSON array of tool calls in this format:
 
     try {
       this.logger.debug(`LangChain: Generating MCP commands for step: ${step}`);
-      
+
       const result = await chain.invoke({
         step: step,
         url: context.url || 'unknown',
-        elements: context.elements ? 
-          context.elements.slice(0, 10).map((el: any) => `${el.type}: "${el.name || el.text}"`).join(', ') : 
-          'none',
-        availableTools: context.availableTools || 'browser_navigate, browser_type, browser_click, browser_snapshot'
+        elements: context.elements
+          ? context.elements
+              .slice(0, 10)
+              .map((el: any) => `${el.type}: "${el.name || el.text}"`)
+              .join(', ')
+          : 'none',
+        availableTools:
+          context.availableTools ||
+          'browser_navigate, browser_type, browser_click, browser_snapshot',
       });
 
       // Validate the result
       const parsed = MCPCallsSchema.parse(result);
       this.logger.debug(`LangChain: Generated ${parsed.length} MCP commands`);
       return parsed;
-
     } catch (error) {
       this.logger.error(`LangChain MCP generation failed: ${error}`);
       throw new Error(`Failed to generate MCP commands: ${error}`);
@@ -131,47 +137,36 @@ Respond with a JSON array of tool calls in this format:
   // Verify test outcome using natural language understanding
   async verifyOutcome(outcome: string, pageState: any): Promise<boolean> {
     const prompt = ChatPromptTemplate.fromTemplate(`
-You are an expert web testing assistant. Analyze the page state to verify the expected outcome.
+You are an expert web testing assistant. Your task is to analyze a simplified representation of a web page's state (provided as a list of elements) and determine if an expected outcome has been met.
 
 Expected Outcome: {outcome}
 
-Page Elements Analysis:
+Current Page Elements:
 {elements}
 
-Key Verification Guidelines:
-- For "username" outcomes: Look for user identifiers like "Test", "T Test", email addresses, or profile buttons
-- For "navigation menu" outcomes: Focus on navigation/header elements and user account indicators  
-- For "user avatar" outcomes: Look for button elements or user display components
-- Be flexible with text matching - "T Test" or "Test" counts as showing username
-- Consider element context - buttons in navigation areas often represent user accounts
+Based *only* on the provided Page Elements, would you conclude that the Expected Outcome is true?
 
-Example Analysis:
-If I see elements like 'button: "T Test"' or 'link: "Test"' in the page, this indicates a logged-in user whose username/display name is being shown.
-
-Based on the elements above, determine if the outcome "{outcome}" is satisfied.
-
-Respond with only "true" or "false".
+Provide your answer in a JSON format with two keys: "result" (a boolean true or false) and "reasoning" (a brief explanation of your decision).
     `);
 
-    const chain = prompt.pipe(this.model);
+    const parser = new JsonOutputParser();
+    const chain = prompt.pipe(this.model).pipe(parser);
 
     try {
       this.logger.debug(`LangChain: Verifying outcome: ${outcome}`);
-      
+
       const result = await chain.invoke({
         outcome: outcome,
-        url: pageState.url || 'unknown',
-        title: pageState.title || 'unknown',
-        elements: pageState.elements ? 
-          pageState.elements.map((el: any) => `${el.type}: "${el.name || el.text}"`).join(', ') : 
-          'none'
+        elements: pageState.elements
+          ? pageState.elements.map((el: any) => `${el.type}: "${el.name || el.text}"`).join(', ')
+          : 'none',
       });
 
-      const responseText = String((result as any)?.content || result);
-      const verified = responseText.toLowerCase().includes('true');
-      this.logger.debug(`LangChain: Verification result: ${verified}`);
-      return verified;
-
+      const parsed = VerificationResultSchema.parse(result);
+      this.logger.debug(
+        `LangChain: Verification result: ${parsed.result}. Reasoning: ${parsed.reasoning}`
+      );
+      return parsed.result;
     } catch (error) {
       this.logger.error(`LangChain verification failed: ${error}`);
       return false;
@@ -182,7 +177,7 @@ Respond with only "true" or "false".
   async process(prompt: string, systemPrompt?: string): Promise<string> {
     try {
       const messages: BaseMessage[] = [];
-      
+
       if (systemPrompt) {
         messages.push(new SystemMessage(systemPrompt));
       }
@@ -190,7 +185,6 @@ Respond with only "true" or "false".
 
       const result = await this.model.invoke(messages);
       return result.content;
-
     } catch (error) {
       this.logger.error(`LangChain processing failed: ${error}`);
       throw error;
