@@ -14,18 +14,17 @@ export default defineConfig({
         'reports/**',
         '**/*.d.ts',
         '**/*.config.*',
-        '**/coverage/**'
-      ]
+        '**/coverage/**',
+        'src/cli/**',
+        'src/ui/**',
+        'src/index.ts',
+        'src/types/**',
+      ],
     },
     include: [
       'src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
-      'tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'
+      'tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
     ],
-    exclude: [
-      'node_modules/**',
-      'dist/**',
-      'test-results/**',
-      'reports/**'
-    ]
-  }
+    exclude: ['node_modules/**', 'dist/**', 'test-results/**', 'reports/**'],
+  },
 });

@@ -109,7 +109,22 @@ const workflow = new StateGraph({ channels: graphState })
   .addNode('analyze', analyzeResultsNode);
 
 workflow.addEdge(START, 'parse');
-workflow.addEdge('parse', 'execute');
+
+// After parsing, decide if we can execute or if we should end due to a parsing error.
+workflow.addConditionalEdges(
+  'parse',
+  (state: WorkflowState) => {
+    if (state.error || !state.scenario) {
+      return END; // Use the predefined END channel
+    }
+    return 'execute';
+  },
+  {
+    execute: 'execute',
+    [END]: END,
+  }
+);
+
 workflow.addConditionalEdges('execute', decideNextStep, {
   analyze: 'analyze',
   __end__: END,

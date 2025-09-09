@@ -76,22 +76,46 @@ export class LangChainAIService {
     }
   }
 
+  // [Refactored for Testability]
   // Generate MCP commands from test step
   async generateMCPCommands(
     step: string,
     context: any
   ): Promise<Array<{ tool: string; args: any }>> {
-    const prompt = ChatPromptTemplate.fromTemplate(`
-You are an expert E2E testing assistant. Convert the following test step into MCP tool calls.
+    const { prompt, systemPrompt } = this.buildMCPCommandsPrompt(step, context);
+    try {
+      this.logger.debug(`LangChain: Generating MCP commands for step: ${step}`);
+      const response = await this.process(prompt, systemPrompt);
+      const parsed = JSON.parse(response);
+      return MCPCallsSchema.parse(parsed);
+    } catch (error) {
+      this.logger.error(`LangChain MCP generation failed: ${error}`);
+      throw new Error(`Failed to generate MCP commands: ${error}`);
+    }
+  }
 
-Test Step: {step}
+  // [Refactored for Testability]
+  // Verify test outcome using natural language understanding
+  async verifyOutcome(outcome: string, pageState: any): Promise<boolean> {
+    const { prompt, systemPrompt } = this.buildVerifyOutcomePrompt(outcome, pageState);
+    try {
+      this.logger.debug(`LangChain: Verifying outcome: ${outcome}`);
+      const response = await this.process(prompt, systemPrompt);
+      const parsed = JSON.parse(response);
+      const verification = VerificationResultSchema.parse(parsed);
+      this.logger.debug(
+        `LangChain: Verification result: ${verification.result}. Reasoning: ${verification.reasoning}`
+      );
+      return verification.result;
+    } catch (error) {
+      this.logger.error(`LangChain verification failed: ${error}`);
+      return false;
+    }
+  }
 
-Current Page Context:
-- URL: {url}
-- Elements: {elements}
-
-Available MCP Tools:
-{availableTools}
+  // [New Public Method for Testability]
+  buildMCPCommandsPrompt(step: string, context: any) {
+    const systemPrompt = `You are an expert E2E testing assistant. Convert the following test step into MCP tool calls.
 
 Guidelines:
 - Convert the step into one or more specific, actionable MCP tool calls.
@@ -101,76 +125,45 @@ Guidelines:
 - If the user step is just "Wait for URL to be /", you should use the 'browser_wait_for' tool and wait for a piece of text you expect to see on the home page.
 
 Respond with a JSON array of tool calls in this format:
-[{{"tool": "tool_name", "args": {{"param": "value"}}}}]
-    `);
+[{ "tool": "tool_name", "args": { "param": "value" } }]`;
 
-    const parser = new JsonOutputParser();
-    const chain = prompt.pipe(this.model).pipe(parser);
+    const prompt = `Test Step: ${step}
 
-    try {
-      this.logger.debug(`LangChain: Generating MCP commands for step: ${step}`);
-
-      const result = await chain.invoke({
-        step: step,
-        url: context.url || 'unknown',
-        elements: context.elements
-          ? context.elements
-              .slice(0, 10)
-              .map((el: any) => `${el.type}: "${el.name || el.text}"`)
-              .join(', ')
-          : 'none',
-        availableTools:
-          context.availableTools ||
-          'browser_navigate, browser_type, browser_click, browser_snapshot',
-      });
-
-      // Validate the result
-      const parsed = MCPCallsSchema.parse(result);
-      this.logger.debug(`LangChain: Generated ${parsed.length} MCP commands`);
-      return parsed;
-    } catch (error) {
-      this.logger.error(`LangChain MCP generation failed: ${error}`);
-      throw new Error(`Failed to generate MCP commands: ${error}`);
+Current Page Context:
+- URL: ${context.url || 'unknown'}
+- Elements: ${
+      context.elements
+        ? context.elements
+            .slice(0, 10)
+            .map((el: any) => `${el.type}: "${el.name || el.text}"`)
+            .join(', ')
+        : 'none'
     }
+
+Available MCP Tools: ${
+      context.availableTools || 'browser_navigate, browser_type, browser_click, browser_snapshot'
+    }`;
+
+    return { prompt, systemPrompt };
   }
 
-  // Verify test outcome using natural language understanding
-  async verifyOutcome(outcome: string, pageState: any): Promise<boolean> {
-    const prompt = ChatPromptTemplate.fromTemplate(`
-You are an expert web testing assistant. Your task is to analyze a simplified representation of a web page's state (provided as a list of elements) and determine if an expected outcome has been met.
-
-Expected Outcome: {outcome}
-
-Current Page Elements:
-{elements}
+  // [New Public Method for Testability]
+  buildVerifyOutcomePrompt(outcome: string, pageState: any) {
+    const systemPrompt = `You are an expert web testing assistant. Your task is to analyze a simplified representation of a web page's state (provided as a list of elements) and determine if an expected outcome has been met.
 
 Based *only* on the provided Page Elements, would you conclude that the Expected Outcome is true?
 
-Provide your answer in a JSON format with two keys: "result" (a boolean true or false) and "reasoning" (a brief explanation of your decision).
-    `);
+Provide your answer in a JSON format with two keys: "result" (a boolean true or false) and "reasoning" (a brief explanation of your decision).`;
 
-    const parser = new JsonOutputParser();
-    const chain = prompt.pipe(this.model).pipe(parser);
+    const prompt = `Expected Outcome: ${outcome}
 
-    try {
-      this.logger.debug(`LangChain: Verifying outcome: ${outcome}`);
-
-      const result = await chain.invoke({
-        outcome: outcome,
-        elements: pageState.elements
-          ? pageState.elements.map((el: any) => `${el.type}: "${el.name || el.text}"`).join(', ')
-          : 'none',
-      });
-
-      const parsed = VerificationResultSchema.parse(result);
-      this.logger.debug(
-        `LangChain: Verification result: ${parsed.result}. Reasoning: ${parsed.reasoning}`
-      );
-      return parsed.result;
-    } catch (error) {
-      this.logger.error(`LangChain verification failed: ${error}`);
-      return false;
-    }
+Current Page Elements:
+${
+  pageState.elements && pageState.elements.length > 0
+    ? pageState.elements.map((el: any) => `${el.type}: "${el.name || el.text}"`).join('\n')
+    : 'none'
+}`;
+    return { prompt, systemPrompt };
   }
 
   // Generic AI processing for backward compatibility
