@@ -23,36 +23,6 @@ export abstract class AIAgent<TInput, TOutput> implements BaseAgent<TInput, TOut
   ) {}
 
   abstract process(input: TInput): Promise<TOutput>;
-
-  /**
-   * Unified method to call the AI using the central LangChainAIService.
-   */
-  protected async callAI(prompt: string, systemPrompt?: string): Promise<string> {
-    this.logger.debug(`AI Call: ${prompt.substring(0, 100)}...`);
-    try {
-      return await this.aiService.process(prompt, systemPrompt);
-    } catch (error) {
-      this.logger.error(`AI call failed: ${error}`);
-      throw error;
-    }
-  }
-
-  protected parseJSON<T>(jsonString: string): T {
-    try {
-      // Clean up common JSON formatting issues
-      const cleaned = jsonString
-        .replace(/^```json\s*/i, '')
-        .replace(/\s*```$/i, '')
-        .replace(/^```\s*/i, '')
-        .trim();
-
-      return JSON.parse(cleaned);
-    } catch (error) {
-      this.logger.error(`JSON parsing failed: ${error}`);
-      this.logger.debug(`Raw string: ${jsonString}`);
-      throw new Error(`Invalid JSON response from AI: ${error}`);
-    }
-  }
 }
 
 // Error Types

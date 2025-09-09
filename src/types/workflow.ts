@@ -32,6 +32,12 @@ export interface ExpectedOutcome {
   description: string;
 }
 
+export interface OutcomeResult {
+  description: string;
+  status: 'passed' | 'failed';
+  error?: string;
+}
+
 export interface TestResult {
   scenarioId: string;
   status: 'passed' | 'failed' | 'skipped' | 'error';
@@ -42,6 +48,7 @@ export interface TestResult {
   screenshots: string[];
   error?: string;
   accessibility?: AccessibilityReport;
+  outcomeResults?: OutcomeResult[];
 }
 
 export interface StepResult {
@@ -88,6 +95,11 @@ export interface TestAnalysis {
     slowestStep?: string;
   };
   accessibilityScore: number;
+  tokenUsage?: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  };
 }
 
 // AI Provider Configuration

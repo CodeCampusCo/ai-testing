@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AnalysisAgent } from '../../src/agents/analysis-agent';
 import { LangChainAIService } from '../../src/ai/langchain-service';
 import { TestScenario, TestResult } from '../../src/types/workflow';
-import { AIAgent } from '../../src/agents/base';
 
 // Mock dependencies
 vi.mock('../../src/ai/langchain-service');
@@ -64,7 +63,7 @@ describe('AnalysisAgent', () => {
     vi.clearAllMocks();
 
     const mockAiServiceInstance = {
-      process: vi.fn(),
+      analyzeTestResults: vi.fn(),
     };
     vi.mocked(LangChainAIService).mockImplementation(() => mockAiServiceInstance as any);
 
@@ -84,7 +83,7 @@ describe('AnalysisAgent', () => {
       summary: 'The test passed successfully with good performance.',
       suggestions: ['Consider adding more assertions.'],
     };
-    vi.spyOn(AIAgent.prototype as any, 'callAI').mockResolvedValue(JSON.stringify(aiResponse));
+    vi.mocked(mockAiService.analyzeTestResults).mockResolvedValue(aiResponse);
 
     const analysis = await analysisAgent.process({
       scenario: mockScenario,
@@ -106,7 +105,7 @@ describe('AnalysisAgent', () => {
         'Improve accessibility by adding labels.',
       ],
     };
-    vi.spyOn(AIAgent.prototype as any, 'callAI').mockResolvedValue(JSON.stringify(aiResponse));
+    vi.mocked(mockAiService.analyzeTestResults).mockResolvedValue(aiResponse);
 
     const analysis = await analysisAgent.process({
       scenario: mockScenario,
@@ -133,7 +132,7 @@ describe('AnalysisAgent', () => {
       ],
     };
     const aiResponse = { summary: 'Performance issues detected.', suggestions: [] };
-    vi.spyOn(AIAgent.prototype as any, 'callAI').mockResolvedValue(JSON.stringify(aiResponse));
+    vi.mocked(mockAiService.analyzeTestResults).mockResolvedValue(aiResponse);
 
     const analysis = await analysisAgent.process({ scenario: mockScenario, result: slowResult });
 
@@ -143,12 +142,11 @@ describe('AnalysisAgent', () => {
     expect(analysis.performanceMetrics.slowestStep).toBe('step-1 (23000ms)');
   });
 
-  it('should handle malformed JSON from AI gracefully', async () => {
-    const malformedJson = '{"summary": "Test passed", "suggestions": [';
-    vi.spyOn(AIAgent.prototype as any, 'callAI').mockResolvedValue(malformedJson);
+  it('should handle an AI error gracefully', async () => {
+    vi.mocked(mockAiService.analyzeTestResults).mockRejectedValue(new Error('AI network error'));
 
     await expect(
       analysisAgent.process({ scenario: mockScenario, result: mockPassedResult })
-    ).rejects.toThrow('Invalid JSON response from AI');
+    ).rejects.toThrow('Failed to analyze test results: AI network error');
   });
 });

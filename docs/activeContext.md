@@ -1,30 +1,35 @@
 # Active Context: AI-Powered E2E Test Framework
 
-**Last Updated**: September 10, 2025
+**Last Updated**: September 10, 2025 (End of Session)
 
 ## 1. Current Status
 
-The project has completed a major architectural refactoring and now has strong unit test coverage for its core logic. The workflow is managed by `LangGraph` and AI interactions are unified through `LangChainAIService`.
+The project has undergone a series of significant refactorings and bug fixes, resulting in a more robust, efficient, and maintainable codebase. The AI interaction layer has been modernized using LangChain's structured output capabilities, and the entire test suite is passing. The project is stable and core functionality is working as expected.
 
-The `generate` command has been removed to streamline the project's focus on executing tests from pre-written markdown files. The documentation has been refactored into a Memory Bank structure for clarity and AI-friendliness.
+**Version**: 0.3.0-alpha (est.)
+**Next Milestone**: Continue with Phase 2 of the Roadmap.
 
-**Version**: 0.2.0-alpha
-**Next Milestone**: Enhance Core Features (Phase 2 of Roadmap)
+## 2. Recent Accomplishments (September 10, 2025 Session)
 
-## 2. Recent Accomplishments (September 2025)
-
-- **Comprehensive Unit Testing**: Added extensive unit tests for all core components (`TestExecutorAgent`, `AnalysisAgent`, `LangGraphWorkflow`, `LangChainAIService`), significantly increasing code quality and stability. This process also uncovered and fixed critical bugs in the workflow logic and AI service.
-- **Architectural Refactor**: Migrated from a simple sequential runner to a `LangGraph` workflow.
-- **Unified AI Service**: Centralized all LLM interactions into `LangChainAIService`, fixing critical hanging bugs.
-- **Intelligent Wait Handling**: Enhanced the core AI prompt to intelligently generate wait commands, fixing the root cause of navigation failures.
-- **Feature Streamlining**: Removed the AI-powered test generation feature (`generate` command) to focus the tool's scope.
-- **Documentation Overhaul**: Restructured all project documentation into a clear, Memory Bank format.
+- **Major AI Service Refactor**:
+  - Replaced manual JSON parsing with LangChain's `.withStructuredOutput()` for all AI calls, drastically improving reliability and fixing numerous parsing bugs.
+  - Decoupled logic by creating `PromptFactory` and `ModelFactory`, making the `LangChainAIService` a cleaner service layer.
+- **AI-Powered Scenario Parsing**:
+  - Implemented a new `ParsingAgent` that uses AI to parse `.md` test files, making the process more flexible than the previous string-based method.
+- **Enhanced Reporting & UX**:
+  - Improved the `StepProgressManager` to display step counts correctly in the live output.
+  - Added a dedicated "Outcome Verification" section to the final test report to clearly distinguish between step failures and outcome failures.
+- **Token Usage Tracking**:
+  - Implemented a feature to track and display total, input, and output token usage for each test run, providing valuable cost analysis data.
+- **Comprehensive Test Coverage**:
+  - Fixed the entire test suite after the major refactoring.
+  - Added new unit tests for the `ParsingAgent`, `PromptFactory`, and `ModelFactory`, ensuring high test coverage for the new architecture.
 
 ## 3. Outstanding Items & Next Steps
 
 ### 3.1 Immediate Priorities
 
-With the "Strict Execution" philosophy now defined, the next priority is to begin **Phase 2** of the roadmap. The first task will be **"Add support for environment-specific configurations"**.
+With the core architecture now stable and well-tested, the next priority is to continue with **Phase 2** of the roadmap. The first task remains **"Add support for environment-specific configurations"**.
 
 ### 3.2 Project Roadmap
 
@@ -48,6 +53,6 @@ With the "Strict Execution" philosophy now defined, the next priority is to begi
 ## 4. Key Architectural Decisions on Record
 
 - **Workflow Engine**: `LangGraph` is the central orchestrator.
-- **AI Interaction**: All LLM calls must go through the unified `LangChainAIService`.
-- **Test Execution**: The `TestExecutorAgent` uses a "Pure AI-First" approach, where the AI generates browser commands for each step based on a real-time page snapshot.
-- **Test Definition**: Tests are defined exclusively in markdown (`.md`) files, supported by `config.yml` for configuration and variables.
+- **AI Interaction**: All AI calls use specific methods in `LangChainAIService` that leverage `.withStructuredOutput()` for robust, typed responses.
+- **Decoupled Factories**: Prompt and Model creation logic is fully decoupled into `PromptFactory` and `ModelFactory`.
+- **Test Definition**: Tests are defined in markdown (`.md`) and parsed by the AI-powered `ParsingAgent`.

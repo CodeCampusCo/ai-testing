@@ -35,6 +35,7 @@ export class AnalysisAgent extends AIAgent<AnalysisInput, TestAnalysis> {
           averageStepDuration: 0,
         },
         accessibilityScore: basicAnalysis.accessibilityScore ?? 0,
+        tokenUsage: this.aiService.getTotalTokenUsage(),
       };
 
       this.logger.info(
@@ -109,43 +110,13 @@ export class AnalysisAgent extends AIAgent<AnalysisInput, TestAnalysis> {
     input: AnalysisInput,
     basicAnalysis: Partial<TestAnalysis>
   ): Promise<Pick<TestAnalysis, 'summary' | 'suggestions'>> {
-    const systemPrompt = this.buildSystemPrompt();
     const userPrompt = this.buildUserPrompt(input, basicAnalysis);
-
-    const response = await this.callAI(userPrompt, systemPrompt);
-    const insights = this.parseJSON<{
-      summary: string;
-      suggestions: string[];
-    }>(response);
+    const insights = await this.aiService.analyzeTestResults(userPrompt);
 
     return {
       summary: insights.summary || 'Analysis completed',
       suggestions: Array.isArray(insights.suggestions) ? insights.suggestions : [],
     };
-  }
-
-  private buildSystemPrompt(): string {
-    return `You are an expert QA analyst specializing in automated test result analysis. Your task is to provide actionable insights about test execution results.
-
-You must return ONLY valid JSON with this structure:
-{
-  "summary": "Brief summary of test results and key findings",
-  "suggestions": [
-    "Specific actionable suggestion 1",
-    "Specific actionable suggestion 2"
-  ]
-}
-
-Guidelines for analysis:
-- Focus on actionable insights and specific recommendations
-- Consider performance, accessibility, and reliability issues
-- Suggest improvements to test design and implementation
-- Identify patterns in failures or slow performance
-- Recommend best practices for better test coverage
-- Consider user experience implications
-- Suggest preventive measures for common issues
-
-Keep suggestions practical and implementable.`;
   }
 
   private buildUserPrompt(input: AnalysisInput, basicAnalysis: Partial<TestAnalysis>): string {

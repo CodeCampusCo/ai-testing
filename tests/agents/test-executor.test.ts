@@ -62,7 +62,7 @@ describe('TestExecutorAgent', () => {
       generateMCPCommands: vi
         .fn()
         .mockResolvedValue([{ tool: 'browser_navigate', args: { url: '/' } }]),
-      verifyOutcome: vi.fn().mockResolvedValue(true),
+      batchVerifyOutcomes: vi.fn().mockResolvedValue([]),
     };
     vi.mocked(LangChainAIService).mockImplementation(() => mockAiServiceInstance as any);
 
@@ -74,6 +74,7 @@ describe('TestExecutorAgent', () => {
     };
 
     mockProgressManager = {
+      setTotalSteps: vi.fn(),
       startStep: vi.fn(),
       succeedStep: vi.fn(),
       failStep: vi.fn(),
@@ -105,7 +106,7 @@ describe('TestExecutorAgent', () => {
       'browser_take_screenshot',
       expect.any(Object)
     );
-    expect(mockAiService.verifyOutcome).toHaveBeenCalledOnce();
+    expect(mockAiService.batchVerifyOutcomes).toHaveBeenCalledOnce();
     expect(mockBrowser.disconnect).toHaveBeenCalledOnce();
     expect(mockProgressManager.succeedStep).toHaveBeenCalledTimes(2);
     expect(result.steps.length).toBe(2);
@@ -124,13 +125,20 @@ describe('TestExecutorAgent', () => {
     expect(result.steps.length).toBe(1);
     expect(result.steps[0].status).toBe('failed');
     expect(result.steps[0].error).toBe('Step failed');
-    expect(mockAiService.verifyOutcome).not.toHaveBeenCalled();
+    expect(mockAiService.batchVerifyOutcomes).not.toHaveBeenCalled();
     expect(mockBrowser.disconnect).toHaveBeenCalledOnce();
     expect(mockProgressManager.failStep).toHaveBeenCalledOnce();
   });
 
   it('should handle failure during outcome verification', async () => {
-    vi.mocked(mockAiService.verifyOutcome).mockResolvedValue(false);
+    const failedOutcomeResult = [
+      {
+        description: 'Outcome 1: User is logged in',
+        status: 'failed' as const,
+        error: 'Not logged in',
+      },
+    ];
+    vi.mocked(mockAiService.batchVerifyOutcomes).mockResolvedValue(failedOutcomeResult);
 
     const result = await testExecutor.process(mockScenario);
 

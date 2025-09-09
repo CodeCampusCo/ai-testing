@@ -9,6 +9,7 @@ import {
 import { MCPClientConfig } from '../types/mcp.js';
 import { TestExecutorAgent } from '../agents/test-executor.js';
 import { AnalysisAgent } from '../agents/analysis-agent.js';
+import { ParsingAgent } from '../agents/parsing-agent.js';
 import { StepProgressManager } from '../ui/step-progress.js';
 
 // Configuration for the new workflow class
@@ -51,6 +52,7 @@ const graphState: StateGraphArgs<WorkflowState>['channels'] = {
 // Agent instances will be held here
 let executorAgent: TestExecutorAgent;
 let analysisAgent: AnalysisAgent;
+let parsingAgent: ParsingAgent;
 
 // Node functions
 const executeTestNode = async (state: WorkflowState): Promise<Partial<WorkflowState>> => {
@@ -85,7 +87,7 @@ const analyzeResultsNode = async (state: WorkflowState): Promise<Partial<Workflo
 // This new node parses markdown input when generation is skipped
 const parseInputNode = async (state: WorkflowState): Promise<Partial<WorkflowState>> => {
   try {
-    const scenario = parseMarkdownToScenario(state.input);
+    const scenario = await parsingAgent.process(state.input);
     return { scenario, currentStep: 'execute' };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -131,51 +133,6 @@ workflow.addConditionalEdges('execute', decideNextStep, {
 });
 workflow.addEdge('analyze', END);
 
-// Helper function to parse markdown
-function parseMarkdownToScenario(markdown: string): TestScenario {
-  const lines = markdown.split('\n');
-  let description = '';
-  const rawSteps: string[] = [];
-  const rawOutcomes: string[] = [];
-  let currentSection = '';
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.startsWith('# ')) {
-      description = trimmed.substring(2).trim();
-      continue;
-    }
-    if (trimmed.startsWith('## ')) {
-      currentSection = trimmed.substring(3).trim().toLowerCase();
-      continue;
-    }
-    if (
-      (currentSection === 'test steps' || currentSection === 'expected results') &&
-      (trimmed.startsWith('- ') || trimmed.startsWith('* '))
-    ) {
-      const text = trimmed.substring(2).trim();
-      if (currentSection === 'test steps') {
-        rawSteps.push(text);
-      } else {
-        rawOutcomes.push(text);
-      }
-    }
-  }
-
-  return {
-    id: `test-${Date.now()}`,
-    description: description || 'Parsed test scenario',
-    steps: [],
-    expectedOutcomes: [],
-    rawSteps,
-    rawOutcomes,
-    metadata: {
-      priority: 'medium',
-      source: 'file',
-    },
-  };
-}
-
 // Compile the graph
 const app = workflow.compile();
 
@@ -210,6 +167,7 @@ export class LangGraphWorkflow {
       this.config.progressManager
     );
     analysisAgent = new AnalysisAgent(this.aiService, this.logger);
+    parsingAgent = new ParsingAgent(this.aiService, this.logger);
     this.isInitialized = true;
   }
 

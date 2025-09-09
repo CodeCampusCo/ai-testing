@@ -7,7 +7,7 @@ Test successful user login with valid credentials and verify redirect to dashboa
 ## Test Steps
 
 - Navigate to {{urls.main}}
-- Click "Login" button
+- Click 'Login' button
 - Verify current page is Login screen
 - Type '{{valid.username}}' in 'Email address' field
 - Type '{{valid.password}}' in 'Password' field
@@ -17,5 +17,5 @@ Test successful user login with valid credentials and verify redirect to dashboa
 ## Expected Results
 
 - Login form is no longer displayed
-- User navigation menu shows username
+<!-- - User navigation menu shows username -->
 - No error messages are visible

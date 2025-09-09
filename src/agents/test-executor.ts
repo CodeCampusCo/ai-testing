@@ -28,6 +28,7 @@ export class TestExecutorAgent implements BaseAgent<TestScenario, TestResult> {
   }
 
   async process(input: TestScenario): Promise<TestResult> {
+    this.progressManager?.setTotalSteps(input.rawSteps?.length || 0);
     const startTime = new Date();
     this.logger.info(`Executing test scenario: ${input.id}`);
 
@@ -39,6 +40,7 @@ export class TestExecutorAgent implements BaseAgent<TestScenario, TestResult> {
       duration: 0,
       steps: [],
       screenshots: [],
+      outcomeResults: [],
     };
 
     try {
@@ -136,27 +138,25 @@ export class TestExecutorAgent implements BaseAgent<TestScenario, TestResult> {
   }
 
   private async verifyOutcomesWithAI(rawOutcomes: string[], result: TestResult): Promise<void> {
-    this.logger.debug('Verifying outcomes with AI...');
-    for (let i = 0; i < rawOutcomes.length; i++) {
-      const outcome = rawOutcomes[i];
-      if (!outcome) continue;
+    this.logger.debug(`Verifying ${rawOutcomes.length} outcomes with a single AI call...`);
+    try {
+      const snapshot = await this.browser.getSnapshot();
+      const outcomeResults = await this.aiService.batchVerifyOutcomes(rawOutcomes, snapshot);
+      result.outcomeResults = outcomeResults;
 
-      try {
-        const snapshot = await this.browser.getSnapshot();
-        const verified = await this.aiService.verifyOutcome(outcome, snapshot);
-
-        if (!verified) {
-          result.status = 'failed';
-          result.error = `Outcome verification failed: "${outcome}"`;
-          const screenshot = await this.takeScreenshot(`failed-outcome-${i + 1}`);
-          if (screenshot) result.screenshots.push(screenshot);
-          break;
-        }
-      } catch (error) {
+      const failedOutcome = outcomeResults.find(o => o.status === 'failed');
+      if (failedOutcome) {
         result.status = 'failed';
-        result.error = `Error during outcome verification for "${outcome}": ${error}`;
-        break;
+        // Use the first failed outcome's error as the main error for the test result
+        result.error = `Outcome verification failed: "${failedOutcome.description}" - ${failedOutcome.error}`;
+        const screenshot = await this.takeScreenshot(
+          `failed-outcome-${rawOutcomes.indexOf(failedOutcome.description) + 1}`
+        );
+        if (screenshot) result.screenshots.push(screenshot);
       }
+    } catch (error) {
+      result.status = 'failed';
+      result.error = `Error during batch outcome verification: ${error}`;
     }
   }
 

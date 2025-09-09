@@ -19,6 +19,13 @@ export class StepProgressManager {
   }
 
   /**
+   * Update the total number of steps.
+   */
+  setTotalSteps(total: number): void {
+    this.stepCount = total;
+  }
+
+  /**
    * Start progress for a new step
    */
   startStep(description: string): void {
@@ -29,7 +36,7 @@ export class StepProgressManager {
 
     this.currentStep++;
     const text = `Step ${this.currentStep}/${this.stepCount}: ${description}`;
-    
+
     // In verbose mode, don't show spinner to avoid conflicts with debug logs
     if (this.verbose) {
       console.log(chalk.blue(`⏳ ${text}`));
@@ -37,7 +44,7 @@ export class StepProgressManager {
       this.currentSpinner = ora({
         text,
         spinner: 'dots',
-        color: 'cyan'
+        color: 'cyan',
       }).start();
     }
   }
@@ -50,16 +57,21 @@ export class StepProgressManager {
       step: this.currentStep,
       description: this.currentSpinner?.text || `Step ${this.currentStep}`,
       duration,
-      status: 'success' as const
+      status: 'success' as const,
     };
 
     this.completedSteps.push(stepInfo);
 
     if (this.verbose) {
-      console.log(chalk.green(`✅ Step ${this.currentStep}/${this.stepCount} completed (${this.formatDuration(duration)})`));
+      console.log(
+        chalk.green(
+          `✅ Step ${this.currentStep}/${this.stepCount} completed (${this.formatDuration(duration)})`
+        )
+      );
     } else if (this.currentSpinner) {
-      const baseText = this.currentSpinner.text.replace(`Step ${this.currentStep}/${this.stepCount}: `, '');
-      this.currentSpinner.succeed(`${baseText} ${chalk.gray(`(${this.formatDuration(duration)})`)}`);
+      this.currentSpinner.succeed(
+        `${this.currentSpinner.text} ${chalk.gray(`(${this.formatDuration(duration)})`)}`
+      );
       this.currentSpinner = undefined;
     }
   }
@@ -72,7 +84,7 @@ export class StepProgressManager {
       step: this.currentStep,
       description: this.currentSpinner?.text || `Step ${this.currentStep}`,
       duration: duration || 0,
-      status: 'failed' as const
+      status: 'failed' as const,
     };
 
     this.completedSteps.push(stepInfo);
@@ -80,8 +92,7 @@ export class StepProgressManager {
     if (this.verbose) {
       console.log(chalk.red(`❌ Step ${this.currentStep}/${this.stepCount} failed: ${error}`));
     } else if (this.currentSpinner) {
-      const baseText = this.currentSpinner.text.replace(`Step ${this.currentStep}/${this.stepCount}: `, '');
-      this.currentSpinner.fail(`${baseText} ${chalk.red(`- ${error}`)}`);
+      this.currentSpinner.fail(`${this.currentSpinner.text} ${chalk.red(`- ${error}`)}`);
       this.currentSpinner = undefined;
     }
   }
@@ -94,16 +105,21 @@ export class StepProgressManager {
       step: this.currentStep,
       description: this.currentSpinner?.text || `Step ${this.currentStep}`,
       duration,
-      status: 'warning' as const
+      status: 'warning' as const,
     };
 
     this.completedSteps.push(stepInfo);
 
     if (this.verbose) {
-      console.log(chalk.yellow(`⚠️ Step ${this.currentStep}/${this.stepCount} warning: ${warning} (${this.formatDuration(duration)})`));
+      console.log(
+        chalk.yellow(
+          `⚠️ Step ${this.currentStep}/${this.stepCount} warning: ${warning} (${this.formatDuration(duration)})`
+        )
+      );
     } else if (this.currentSpinner) {
-      const baseText = this.currentSpinner.text.replace(`Step ${this.currentStep}/${this.stepCount}: `, '');
-      this.currentSpinner.warn(`${baseText} ${chalk.yellow(`- ${warning}`)} ${chalk.gray(`(${this.formatDuration(duration)})`)}`);
+      this.currentSpinner.warn(
+        `${this.currentSpinner.text} ${chalk.yellow(`- ${warning}`)} ${chalk.gray(`(${this.formatDuration(duration)})`)}`
+      );
       this.currentSpinner = undefined;
     }
   }
@@ -128,8 +144,8 @@ export class StepProgressManager {
     const warnings = this.completedSteps.filter(s => s.status === 'warning').length;
 
     let summary = `\n📋 Step Summary:\n`;
-    
-    this.completedSteps.forEach((step) => {
+
+    this.completedSteps.forEach(step => {
       const icon = step.status === 'success' ? '✅' : step.status === 'failed' ? '❌' : '⚠️';
       const description = step.description.replace(`Step ${step.step}/${this.stepCount}: `, '');
       summary += `${icon} Step ${step.step}: ${description} ${chalk.gray(`(${this.formatDuration(step.duration)})`)}\n`;
