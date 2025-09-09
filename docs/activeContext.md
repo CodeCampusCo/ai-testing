@@ -24,14 +24,13 @@ The `generate` command has been removed to streamline the project's focus on exe
 
 ### 3.1 Immediate Priorities
 
-With testing infrastructure now robust, the next priority is to begin **Phase 2** of the roadmap, starting with **Core Features Enhancement**. The first task will be implementing smart element selection strategies.
+With the "Strict Execution" philosophy now defined, the next priority is to begin **Phase 2** of the roadmap. The first task will be **"Add support for environment-specific configurations"**.
 
 ### 3.2 Project Roadmap
 
 #### Phase 2: Core Features Enhancement
 
 - **Improved Test Execution**:
-  - [ ] Implement smart element selection strategies.
   - [ ] Add support for environment-specific configurations.
 - **Enhanced Reporting**:
   - [ ] Develop detailed HTML reports with screenshots.
@@ -44,7 +43,6 @@ With testing infrastructure now robust, the next priority is to begin **Phase 2*
 #### Phase 3: Advanced Features
 
 - **Parallel Execution**: Implement multi-scenario parallel execution.
-- **Advanced AI Features**: Explore test maintenance suggestions and automatic test healing.
 - **Integration Ecosystem**: Add support for GitHub Actions, Jenkins, and Docker.
 
 ## 4. Key Architectural Decisions on Record

@@ -96,6 +96,15 @@ This pattern makes the executor extremely flexible, as the intelligence for perf
 
 All AI-related logic, including prompt templating, model interaction, and structured output parsing, is handled by the `LangChainAIService`. This ensures that all agents interact with LLMs in a consistent and stable manner.
 
+### 3.3 Strict Execution Philosophy
+
+To ensure deterministic and consistent test results, the framework operates under a "Strict Execution" philosophy.
+
+- **AI as a Translator, Not an Interpreter**: The AI's primary role is to translate a clear, explicit test step into the corresponding browser command(s). It is not expected to interpret ambiguous instructions or guess the user's intent.
+- **Ambiguity is Failure**: If a test step is ambiguous (e.g., "click the button" when multiple buttons exist) or an element cannot be found, the AI should not attempt to guess. This condition must result in a failed test step.
+- **User Responsibility**: The responsibility for writing clear, unambiguous test scenarios lies with the user. A failing test due to ambiguity is considered a necessary feedback loop that prompts the user to improve the clarity of their test files.
+- **Goal**: The ultimate goal is reliability and predictability. Test results must be consistent and directly reflect the instructions in the scenario files.
+
 ## 4. Error Handling & Performance
 
 ### 4.1 Error Handling
