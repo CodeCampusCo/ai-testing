@@ -88,7 +88,7 @@ Return ONLY valid JSON with this structure:
 Guidelines:
 - Provide a concise summary and practical, actionable suggestions.
 - Focus on the root causes of failures, performance bottlenecks (based on the provided step durations), and accessibility issues.
-- **IMPORTANT**: The first step's duration often includes one-time setup costs (like launching a browser) and should be analyzed with that in mind. Do not flag it as an application performance issue unless it is exceptionally long (e.g., >10 seconds).
+- **Performance Guideline**: Analyze step durations. Any step taking longer than 3000ms should be considered a performance bottleneck and flagged as an issue.
 - Suggest specific, preventative improvements for both the test script and the application code.`;
 
   const prompt = `Analyze the following test execution data and provide a comprehensive analysis with specific, actionable recommendations for improving this test and the application being tested.
