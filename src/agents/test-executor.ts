@@ -136,16 +136,7 @@ export class TestExecutorAgent implements BaseAgent<TestScenario, TestResult> {
   }
 
   private async verifyOutcomesWithAI(rawOutcomes: string[], result: TestResult): Promise<void> {
-    this.logger.debug('Waiting for network idle before outcome verification...');
-    try {
-      // This tool does not exist, but we keep the logic in case it's added.
-      // A better approach is handled by the AI prompt generating wait commands.
-      // await this.browser.callTool('browser_wait_for_load_state', { state: 'networkidle' });
-    } catch (error) {
-      this.logger.debug('browser_wait_for_load_state not available, using short delay.');
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-
+    this.logger.debug('Verifying outcomes with AI...');
     for (let i = 0; i < rawOutcomes.length; i++) {
       const outcome = rawOutcomes[i];
       if (!outcome) continue;

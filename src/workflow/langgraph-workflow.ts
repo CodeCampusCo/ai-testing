@@ -110,7 +110,8 @@ const decideNextStep = (state: WorkflowState): 'execute' | 'analyze' | '__end__'
   if (state.error) {
     return '__end__';
   }
-  return state.currentStep === 'execute' ? 'execute' : 'analyze';
+  // Simplified: The currentStep is already the desired next step.
+  return state.currentStep as 'execute' | 'analyze';
 };
 
 // Entry point router
@@ -240,7 +241,7 @@ export class LangGraphWorkflow {
     this.logger?.info('Running LangGraph workflow...');
     const initialState: WorkflowState = {
       input,
-      currentStep: options?.skipGeneration ? 'execute' : 'generate',
+      currentStep: options?.skipGeneration ? 'parse' : 'generate',
     };
 
     const finalState = await app.invoke(initialState);
@@ -259,7 +260,7 @@ export class LangGraphWorkflow {
     this.logger?.info('Running LangGraph streaming workflow...');
     const initialState: WorkflowState = {
       input,
-      currentStep: options?.skipGeneration ? 'execute' : 'generate',
+      currentStep: options?.skipGeneration ? 'parse' : 'generate',
     };
 
     let finalState: WorkflowState = initialState;
