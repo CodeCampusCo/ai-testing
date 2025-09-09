@@ -21,33 +21,11 @@ program
   .description('AI-Powered End-to-End Test Framework')
   .version('0.1.0-alpha');
 
-// Generate command
-program
-  .command('generate')
-  .alias('g')
-  .description('Generate test scenarios from natural language descriptions')
-  .option('-i, --input <description>', 'Test description')
-  .option('-f, --file <path>', 'Input file with test description')
-  .option('-o, --output <path>', 'Output file for generated scenario')
-  .option('--provider <provider>', 'AI provider (openai|anthropic|google)', 'openai')
-  .option('--model <model>', 'AI model to use')
-  .option('--interactive', 'Interactive mode')
-  .option('-v, --verbose', 'Enable detailed debug logging')
-  .action(async options => {
-    try {
-      await handleGenerateCommand(options);
-    } catch (error) {
-      console.error(chalk.red(`Error: ${error instanceof Error ? error.message : error}`));
-      process.exit(1);
-    }
-  });
-
 // Run command
 program
   .command('run')
   .alias('r')
-  .description('Execute test scenarios')
-  .option('-i, --input <description>', 'Test description (generates scenario first)')
+  .description('Execute test scenarios from files')
   .option('-p, --project <name>', 'Project directory name from projects/')
   .option('-f, --file <filename>', 'Test scenario filename (without .md extension)')
   .option('-o, --output <path>', 'Output directory for results')
@@ -63,109 +41,6 @@ program
     }
   });
 
-async function handleGenerateCommand(options: any) {
-  console.log(
-    boxen(chalk.blue.bold('🤖 AI E2E Test Generator'), {
-      padding: 1,
-      borderColor: 'blue',
-      borderStyle: 'round',
-    })
-  );
-
-  let input = '';
-  let outputPath = options.output;
-
-  // Get input
-  if (options.interactive || (!options.input && !options.file)) {
-    const answers = await inquirer.prompt([
-      {
-        type: 'editor',
-        name: 'description',
-        message: 'Enter your test description:',
-        validate: input => (input.trim() ? true : 'Test description is required'),
-      },
-      {
-        type: 'input',
-        name: 'outputPath',
-        message: 'Output file path (optional):',
-        default: `test-scenario-${Date.now()}.json`,
-        when: () => !outputPath,
-      },
-    ]);
-
-    input = answers.description;
-    outputPath = outputPath || answers.outputPath;
-  } else if (options.file) {
-    input = await fs.readFile(resolve(options.file), 'utf-8');
-  } else {
-    input = options.input;
-  }
-
-  // Get AI configuration (from .env)
-  const aiConfig = await getAIConfig();
-  const mcpConfig = getMCPConfig(options);
-
-  // Create workflow
-  const workflow = new LangGraphWorkflow({
-    aiProvider: aiConfig,
-    mcpConfig,
-    logger: createLogger(options.verbose),
-  });
-  await workflow.initialize();
-
-  // Generate scenario
-  const spinner = ora('Generating test scenario...').start();
-
-  try {
-    const result = await workflow.run(input);
-    spinner.stop();
-
-    if (result.error) {
-      console.error(chalk.red(`Generation failed: ${result.error}`));
-      return;
-    }
-
-    if (!result.scenario) {
-      console.error(chalk.red('No scenario was generated'));
-      return;
-    }
-
-    // Save scenario
-    if (outputPath) {
-      await fs.writeFile(resolve(outputPath), JSON.stringify(result.scenario, null, 2), 'utf-8');
-      console.log(chalk.green(`✅ Scenario saved to: ${outputPath}`));
-    }
-
-    // Display scenario summary
-    console.log(
-      '\\n' +
-        boxen(
-          chalk.white.bold('Generated Test Scenario\\n\\n') +
-            chalk.cyan(`ID: ${result.scenario.id}\\n`) +
-            chalk.cyan(`Description: ${result.scenario.description}\\n`) +
-            chalk.cyan(`Steps: ${result.scenario.steps.length}\\n`) +
-            chalk.cyan(`Expected Outcomes: ${result.scenario.expectedOutcomes.length}\\n`) +
-            chalk.cyan(`Priority: ${result.scenario.metadata?.priority || 'medium'}\\n`) +
-            chalk.cyan(
-              `Estimated Duration: ${(result.scenario.metadata?.estimatedDuration || 0) / 1000}s`
-            ),
-          { padding: 1, borderColor: 'green' }
-        )
-    );
-
-    // Show steps
-    console.log(chalk.yellow.bold('\\n📋 Test Steps:'));
-    result.scenario.steps.forEach((step, index) => {
-      console.log(`${index + 1}. ${chalk.blue(step.action)}: ${step.description}`);
-      if (step.target) console.log(`   Target: ${chalk.gray(step.target)}`);
-      if (step.value) console.log(`   Value: ${chalk.gray(step.value)}`);
-    });
-  } catch (error) {
-    spinner.fail('Generation failed');
-    throw error;
-  }
-}
-
 async function handleRunCommand(options: any) {
   console.log(
     boxen(chalk.green.bold('🚀 AI E2E Test Runner'), {
@@ -178,49 +53,12 @@ async function handleRunCommand(options: any) {
   let input = '';
   let outputDir = options.output || './test-results';
 
-  // Get input (either description or scenario file)
-  if (!options.input && !options.file && !options.project) {
-    const { source } = await inquirer.prompt([
-      {
-        type: 'list',
-        name: 'source',
-        message: 'What do you want to test?',
-        choices: [
-          { name: 'Enter test description (generate scenario first)', value: 'description' },
-          { name: 'Load existing scenario file', value: 'file' },
-        ],
-      },
-    ]);
+  // Get input from project and file
+  if (!options.project || !options.file) {
+    throw new Error('Both --project and --file options are required.');
+  }
 
-    if (source === 'description') {
-      const { description } = await inquirer.prompt([
-        {
-          type: 'editor',
-          name: 'description',
-          message: 'Enter your test description:',
-          validate: input => (input.trim() ? true : 'Test description is required'),
-        },
-      ]);
-      input = description;
-    } else {
-      const { filePath } = await inquirer.prompt([
-        {
-          type: 'input',
-          name: 'filePath',
-          message: 'Path to scenario file:',
-          validate: async path => {
-            try {
-              await fs.access(resolve(path));
-              return true;
-            } catch {
-              return 'File not found';
-            }
-          },
-        },
-      ]);
-      input = await fs.readFile(resolve(filePath), 'utf-8');
-    }
-  } else if (options.project && options.file) {
+  if (options.project && options.file) {
     // Load from projects directory
     const projectDir = resolve('projects', options.project);
     const testFile = join(projectDir, `${options.file}.md`);
@@ -268,37 +106,27 @@ async function handleRunCommand(options: any) {
   // Ensure output directory exists
   await fs.mkdir(resolve(outputDir), { recursive: true });
 
-  // Determine if we should skip scenario generation (file-based input)
-  const skipGeneration = options.project && options.file;
-
   // Run workflow with streaming updates
   const spinner = ora('Starting test execution...').start();
 
   try {
-    const result = await workflow.runStreaming(
-      input,
-      state => {
-        switch (state.currentStep) {
-          case 'generate':
-            spinner.text = '🧠 Generating test scenario...';
-            break;
-          case 'parse':
-            spinner.text = '📝 Parsing test scenario...';
-            break;
-          case 'execute':
-            spinner.stop();
-            break;
-          case 'analyze':
-            if (!spinner.isSpinning) {
-              spinner.start('📊 Analyzing results...');
-            } else {
-              spinner.text = '📊 Analyzing results...';
-            }
-            break;
-        }
-      },
-      { skipGeneration }
-    );
+    const result = await workflow.runStreaming(input, state => {
+      switch (state.currentStep) {
+        case 'parse':
+          spinner.text = '📝 Parsing test scenario...';
+          break;
+        case 'execute':
+          spinner.stop();
+          break;
+        case 'analyze':
+          if (!spinner.isSpinning) {
+            spinner.start('📊 Analyzing results...');
+          } else {
+            spinner.text = '📊 Analyzing results...';
+          }
+          break;
+      }
+    });
 
     spinner.stop();
     progressManager.finish();
@@ -470,7 +298,7 @@ function displayTestResults(result: any, resultFile: string) {
 
   // Step results
   if (executionResult?.steps?.length > 0) {
-    console.log(chalk.yellow.bold('\\n📋 Step Results:'));
+    console.log(chalk.yellow.bold('\\n� Step Results:'));
     executionResult.steps.forEach((step: any, index: number) => {
       const stepIcon = step.status === 'passed' ? '✅' : '❌';
       const stepColor = step.status === 'passed' ? 'green' : 'red';

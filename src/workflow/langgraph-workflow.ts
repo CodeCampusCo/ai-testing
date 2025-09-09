@@ -7,7 +7,6 @@ import {
   WorkflowState,
 } from '../types/workflow.js';
 import { MCPClientConfig } from '../types/mcp.js';
-import { ScenarioGeneratorAgent } from '../agents/scenario-generator.js';
 import { TestExecutorAgent } from '../agents/test-executor.js';
 import { AnalysisAgent } from '../agents/analysis-agent.js';
 import { StepProgressManager } from '../ui/step-progress.js';
@@ -50,21 +49,10 @@ const graphState: StateGraphArgs<WorkflowState>['channels'] = {
 };
 
 // Agent instances will be held here
-let scenarioAgent: ScenarioGeneratorAgent;
 let executorAgent: TestExecutorAgent;
 let analysisAgent: AnalysisAgent;
 
 // Node functions
-const generateScenarioNode = async (state: WorkflowState): Promise<Partial<WorkflowState>> => {
-  try {
-    const scenario = await scenarioAgent.process({ description: state.input });
-    return { scenario, currentStep: 'execute' };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return { error: `Scenario generation failed: ${errorMessage}`, currentStep: 'complete' };
-  }
-};
-
 const executeTestNode = async (state: WorkflowState): Promise<Partial<WorkflowState>> => {
   if (!state.scenario) {
     return { error: 'No scenario to execute', currentStep: 'complete' };
@@ -114,28 +102,14 @@ const decideNextStep = (state: WorkflowState): 'execute' | 'analyze' | '__end__'
   return state.currentStep as 'execute' | 'analyze';
 };
 
-// Entry point router
-const routeToStart = (state: WorkflowState): 'generate' | 'parse' => {
-  return state.currentStep === 'generate' ? 'generate' : 'parse';
-};
-
 // Build the graph
 const workflow = new StateGraph({ channels: graphState })
-  .addNode('generate', generateScenarioNode)
   .addNode('parse', parseInputNode)
   .addNode('execute', executeTestNode)
   .addNode('analyze', analyzeResultsNode);
 
-workflow.addConditionalEdges(START, routeToStart, {
-  generate: 'generate',
-  parse: 'parse',
-});
-
+workflow.addEdge(START, 'parse');
 workflow.addEdge('parse', 'execute');
-workflow.addConditionalEdges('generate', decideNextStep, {
-  execute: 'execute',
-  __end__: END,
-});
 workflow.addConditionalEdges('execute', decideNextStep, {
   analyze: 'analyze',
   __end__: END,
@@ -214,7 +188,6 @@ export class LangGraphWorkflow {
     if (this.isInitialized) return;
     await this.aiService.initialize();
 
-    scenarioAgent = new ScenarioGeneratorAgent(this.aiService, this.logger);
     executorAgent = new TestExecutorAgent(
       this.config.mcpConfig,
       this.aiService,
@@ -234,14 +207,14 @@ export class LangGraphWorkflow {
     };
   }
 
-  async run(input: string, options?: { skipGeneration?: boolean }): Promise<WorkflowState> {
+  async run(input: string): Promise<WorkflowState> {
     if (!this.isInitialized) {
       throw new Error('Workflow not initialized. Call initialize() first.');
     }
     this.logger?.info('Running LangGraph workflow...');
     const initialState: WorkflowState = {
       input,
-      currentStep: options?.skipGeneration ? 'parse' : 'generate',
+      currentStep: 'parse',
     };
 
     const finalState = await app.invoke(initialState);
@@ -251,8 +224,7 @@ export class LangGraphWorkflow {
 
   async runStreaming(
     input: string,
-    onUpdate?: (state: WorkflowState) => void,
-    options?: { skipGeneration?: boolean }
+    onUpdate?: (state: WorkflowState) => void
   ): Promise<WorkflowState> {
     if (!this.isInitialized) {
       throw new Error('Workflow not initialized. Call initialize() first.');
@@ -260,7 +232,7 @@ export class LangGraphWorkflow {
     this.logger?.info('Running LangGraph streaming workflow...');
     const initialState: WorkflowState = {
       input,
-      currentStep: options?.skipGeneration ? 'parse' : 'generate',
+      currentStep: 'parse',
     };
 
     let finalState: WorkflowState = initialState;

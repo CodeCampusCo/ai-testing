@@ -19,7 +19,6 @@ graph TB
     end
 
     subgraph "AI Agents (Graph Nodes)"
-        C[ScenarioGeneratorAgent]
         D[TestExecutorAgent]
         E[AnalysisAgent]
     end
@@ -32,11 +31,9 @@ graph TB
 
     A & J & K --> B
 
-    B -- Manages State --> C
     B -- Manages State --> D
     B -- Manages State --> E
 
-    C -- Uses --> F
     D -- Uses --> F
     E -- Uses --> F
     D -- Uses --> G
@@ -48,15 +45,14 @@ graph TB
 
 ### 1.2 Component Responsibilities
 
-| Component                     | Responsibility                                                                                                                            |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **CLI Interface**             | User interaction, command parsing, and input validation.                                                                                  |
-| **LangGraph Workflow**        | The core orchestrator. Manages the state and control flow between agents using a graph-based structure.                                   |
-| **LangChain AI Service**      | A centralized, unified service for all interactions with LLM providers. Handles prompt templating and structured output parsing.          |
-| **Scenario Generation Agent** | An AI-driven node that converts a high-level test description into a structured `TestScenario` object.                                    |
-| **Test Execution Agent**      | A pure AI-driven orchestrator. For each natural language step, it uses the AI Service to generate and execute the necessary MCP commands. |
-| **Report Analysis Agent**     | An AI-driven node that analyzes the final `TestResult` to generate summaries, identify issues, and provide suggestions.                   |
-| **Playwright MCP Client**     | A client wrapper for communicating with the `@playwright/mcp` server for all browser automation tasks.                                    |
+| Component                 | Responsibility                                                                                                                            |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **CLI Interface**         | User interaction, command parsing, and input validation.                                                                                  |
+| **LangGraph Workflow**    | The core orchestrator. Manages the state and control flow between agents using a graph-based structure.                                   |
+| **LangChain AI Service**  | A centralized, unified service for all interactions with LLM providers. Handles prompt templating and structured output parsing.          |
+| **Test Execution Agent**  | A pure AI-driven orchestrator. For each natural language step, it uses the AI Service to generate and execute the necessary MCP commands. |
+| **Report Analysis Agent** | An AI-driven node that analyzes the final `TestResult` to generate summaries, identify issues, and provide suggestions.                   |
+| **Playwright MCP Client** | A client wrapper for communicating with the `@playwright/mcp` server for all browser automation tasks.                                    |
 
 ## 2. Technical Stack
 
@@ -127,15 +123,7 @@ class PlaywrightMCPClient {
 
 ## 3. Data Flow Architecture
 
-### 3.1 Test Generation Flow
-
-```
-User Input → Website Analysis → AI Processing → Scenario Generation → File Creation
-     ↓              ↓               ↓                ↓               ↓
-   CLI Args → MCP Snapshot → GPT-4 Analysis → .md Template → .yml Config
-```
-
-### 3.2 Test Execution Flow
+### 3.1 Test Execution Flow
 
 ```
 Test Files → Parsing → AI Translation → MCP Commands → Browser Actions → Results
@@ -149,11 +137,11 @@ The framework's core logic is built on a modular, AI-first architecture orchestr
 
 ### 4.1 LangGraph Workflow
 
-The `LangGraphWorkflow` class is the central orchestrator. It defines a stateful graph where each node is an agent. It manages the flow of data (`WorkflowState`) between nodes and handles conditional branching (e.g., skipping scenario generation if a file is provided, or ending execution on failure).
+The `LangGraphWorkflow` class is the central orchestrator. It defines a stateful graph where each node is an agent. It manages the flow of data (`WorkflowState`) between nodes and handles conditional branching (e.g., ending execution on failure).
 
 ### 4.2 AI Agent Unification
 
-All agents that require AI capabilities (like `ScenarioGeneratorAgent` and `AnalysisAgent`) extend a common `AIAgent` base class. This base class is now refactored to use a single, shared `LangChainAIService` instance, ensuring all AI interactions are consistent, stable, and managed centrally.
+All agents that require AI capabilities (like `AnalysisAgent`) extend a common `AIAgent` base class. This base class is now refactored to use a single, shared `LangChainAIService` instance, ensuring all AI interactions are consistent, stable, and managed centrally.
 
 ### 4.3 Pure AI-Driven Test Executor
 
@@ -321,17 +309,16 @@ class TokenOptimizer {
 ### 8.1 Unit Testing
 
 ```typescript
-// Agent unit tests
-describe('ScenarioGenerationAgent', () => {
-  it('should generate valid test scenarios from accessibility snapshot', async () => {
-    const mockSnapshot = createMockSnapshot();
-    const agent = new ScenarioGenerationAgentImpl(mockMcpClient, mockAI);
+// Example Agent unit test
+describe('AnalysisAgent', () => {
+  it('should provide a summary and suggestions for a test result', async () => {
+    const mockResult = createMockTestResult();
+    const agent = new AnalysisAgent(mockAIService);
 
-    const scenarios = await agent.generateScenarios(mockSnapshot);
+    const analysis = await agent.process(mockResult);
 
-    expect(scenarios).toHaveLength(3);
-    expect(scenarios[0].steps).toBeDefined();
-    expect(scenarios[0].assertions).toBeDefined();
+    expect(analysis.summary).toBeDefined();
+    expect(analysis.suggestions).toBeInstanceOf(Array);
   });
 });
 ```

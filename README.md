@@ -17,15 +17,6 @@ export AI_PROVIDER=openai  # or anthropic, google
 export AI_API_KEY=your-api-key-here
 export AI_MODEL=gpt-4  # optional, uses provider defaults
 
-# Generate test scenario from natural language
-ai-e2e-test generate -i "Test login flow for my website"
-
-# Generate interactively
-ai-e2e-test generate --interactive
-
-# Run complete test workflow (generate + execute + analyze)
-ai-e2e-test run -i "Test Google search functionality"
-
 # Run a specific test file from a project
 ai-e2e-test run -p example-project -f login-test
 
@@ -59,7 +50,6 @@ ai-e2e-test run -p example-project -f login-test --verbose --no-headless
 ┌────────────┴─────────────┐
 │ nodes execute...         │
 │                          │
-│   🧠 ScenarioGenerator   │
 │   🌐 TestExecutor        │
 │   📊 AnalysisAgent       │
 │                          │
