@@ -55,10 +55,14 @@ export interface StepResult {
   stepId: string;
   description: string; // The original natural language step
   status: 'passed' | 'failed' | 'skipped';
-  duration: number;
+  duration: number; // This should be the MCP execution time
   error?: string;
   actualValue?: string;
   screenshot?: string;
+  durationBreakdown?: {
+    ai: number;
+    mcp: number;
+  };
 }
 
 export interface AccessibilityReport {

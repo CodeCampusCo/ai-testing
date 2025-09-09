@@ -145,7 +145,11 @@ export class AnalysisAgent extends AIAgent<AnalysisInput, TestAnalysis> {
     // Step details
     prompt += `\n**Step Results:**\n`;
     result.steps.forEach((step, index) => {
-      prompt += `${index + 1}. ${step.stepId}: ${step.status} (${step.duration}ms)`;
+      let breakdown = '';
+      if (step.durationBreakdown) {
+        breakdown = ` (AI: ${step.durationBreakdown.ai}ms, MCP: ${step.durationBreakdown.mcp}ms)`;
+      }
+      prompt += `${index + 1}. ${step.stepId}: ${step.status} (${step.duration}ms)${breakdown}`;
       if (step.error) {
         prompt += ` - Error: ${step.error}`;
       }

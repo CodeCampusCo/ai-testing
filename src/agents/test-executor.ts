@@ -64,7 +64,8 @@ export class TestExecutorAgent implements BaseAgent<TestScenario, TestResult> {
       result.error = error instanceof Error ? error.message : String(error);
     } finally {
       result.endTime = new Date();
-      result.duration = result.endTime.getTime() - startTime.getTime();
+      // Calculate duration from the sum of step MCP times for accuracy
+      result.duration = result.steps.reduce((total, step) => total + step.duration, 0);
 
       try {
         const finalScreenshot = await this.takeScreenshot('final-state');
@@ -90,38 +91,51 @@ export class TestExecutorAgent implements BaseAgent<TestScenario, TestResult> {
       const stepDescription = rawSteps[i];
       if (!stepDescription) continue;
 
-      const stepStart = Date.now();
+      const totalStepStart = Date.now();
       this.progressManager?.startStep(stepDescription);
 
       const stepResult: StepResult = {
         stepId: `step-${i + 1}`,
         status: 'passed',
-        duration: 0,
+        duration: 0, // Will be MCP time
         description: stepDescription,
       };
 
-      try {
-        const snapshot = await this.browser.getSnapshot();
-        const mcpCalls = await this.aiService.generateMCPCommands(stepDescription, snapshot);
+      let aiDuration = 0;
+      let mcpDuration = 0;
 
+      try {
+        const mcpSnapshotStart = Date.now();
+        const snapshot = await this.browser.getSnapshot();
+        mcpDuration += Date.now() - mcpSnapshotStart;
+
+        const aiStart = Date.now();
+        const mcpCalls = await this.aiService.generateMCPCommands(stepDescription, snapshot);
+        aiDuration = Date.now() - aiStart;
+
+        const mcpExecStart = Date.now();
         for (const call of mcpCalls) {
           await this.browser.callTool(call.tool, call.args);
         }
+        mcpDuration += Date.now() - mcpExecStart;
 
-        const stepDuration = Date.now() - stepStart;
-        this.progressManager?.succeedStep(stepDuration);
-        stepResult.duration = stepDuration;
+        const totalStepDuration = Date.now() - totalStepStart;
+        this.progressManager?.succeedStep(totalStepDuration);
+
+        stepResult.duration = mcpDuration;
+        stepResult.durationBreakdown = { ai: aiDuration, mcp: mcpDuration };
         result.steps.push(stepResult);
       } catch (error) {
-        const stepDuration = Date.now() - stepStart;
+        const totalStepDuration = Date.now() - totalStepStart;
         stepResult.status = 'failed';
         stepResult.error = error instanceof Error ? error.message : String(error);
-        stepResult.duration = stepDuration;
+        stepResult.duration = mcpDuration; // Record any MCP time before failure
+        stepResult.durationBreakdown = { ai: aiDuration, mcp: mcpDuration };
         result.steps.push(stepResult);
         result.status = 'failed';
 
         this.logger.error(`Step ${i + 1} failed: ${stepResult.error}`);
-        this.progressManager?.failStep(stepResult.error, stepDuration);
+        this.progressManager?.failStep(stepResult.error, totalStepDuration);
 
         try {
           const screenshot = await this.takeScreenshot(`failed-step-${i + 1}`);

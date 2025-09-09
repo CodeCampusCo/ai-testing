@@ -64,6 +64,9 @@ describe('AnalysisAgent', () => {
 
     const mockAiServiceInstance = {
       analyzeTestResults: vi.fn(),
+      getTotalTokenUsage: vi
+        .fn()
+        .mockReturnValue({ inputTokens: 0, outputTokens: 0, totalTokens: 0 }),
     };
     vi.mocked(LangChainAIService).mockImplementation(() => mockAiServiceInstance as any);
 

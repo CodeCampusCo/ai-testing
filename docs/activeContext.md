@@ -6,7 +6,7 @@
 
 The project has undergone a series of significant refactorings and bug fixes, resulting in a more robust, efficient, and maintainable codebase. The AI interaction layer has been modernized using LangChain's structured output capabilities, and the entire test suite is passing. The project is stable and core functionality is working as expected.
 
-**Version**: 0.3.0-alpha (est.)
+**Version**: 0.4.0-alpha (est.)
 **Next Milestone**: Continue with Phase 2 of the Roadmap.
 
 ## 2. Recent Accomplishments (September 10, 2025 Session)
@@ -15,15 +15,17 @@ The project has undergone a series of significant refactorings and bug fixes, re
   - Replaced manual JSON parsing with LangChain's `.withStructuredOutput()` for all AI calls, drastically improving reliability and fixing numerous parsing bugs.
   - Decoupled logic by creating `PromptFactory` and `ModelFactory`, making the `LangChainAIService` a cleaner service layer.
 - **AI-Powered Scenario Parsing**:
-  - Implemented a new `ParsingAgent` that uses AI to parse `.md` test files, making the process more flexible than the previous string-based method.
-- **Enhanced Reporting & UX**:
-  - Improved the `StepProgressManager` to display step counts correctly in the live output.
-  - Added a dedicated "Outcome Verification" section to the final test report to clearly distinguish between step failures and outcome failures.
+  - Implemented a new `ParsingAgent` that uses AI to parse `.md` test files, making the process more flexible.
+- **Enhanced Reporting & Performance Analysis**:
+  - Implemented detailed performance tracking in `TestExecutorAgent` to separate AI latency from application (MCP) response time.
+  - Updated `AnalysisAgent` and its prompt to use this detailed timing data, enabling the AI to provide accurate performance analysis of the application under test.
+  - Improved the `StepProgressManager` to display step counts correctly.
+  - Added a dedicated "Outcome Verification" section to the final test report.
 - **Token Usage Tracking**:
-  - Implemented a feature to track and display total, input, and output token usage for each test run, providing valuable cost analysis data.
+  - Implemented a feature to track and display total, input, and output token usage for each test run using LangChain callbacks.
 - **Comprehensive Test Coverage**:
   - Fixed the entire test suite after the major refactoring.
-  - Added new unit tests for the `ParsingAgent`, `PromptFactory`, and `ModelFactory`, ensuring high test coverage for the new architecture.
+  - Added new unit tests for `ParsingAgent`, `PromptFactory`, and `ModelFactory`, ensuring high test coverage.
 
 ## 3. Outstanding Items & Next Steps
 
@@ -56,3 +58,4 @@ With the core architecture now stable and well-tested, the next priority is to c
 - **AI Interaction**: All AI calls use specific methods in `LangChainAIService` that leverage `.withStructuredOutput()` for robust, typed responses.
 - **Decoupled Factories**: Prompt and Model creation logic is fully decoupled into `PromptFactory` and `ModelFactory`.
 - **Test Definition**: Tests are defined in markdown (`.md`) and parsed by the AI-powered `ParsingAgent`.
+- **Performance Metrics**: The `TestExecutorAgent` is responsible for separating AI latency from application response time (`MCP time`) to enable accurate performance analysis.
