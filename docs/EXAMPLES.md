@@ -14,25 +14,30 @@ This document provides practical examples and templates for creating E2E tests u
 # Basic Login Test
 
 ## Description
+
 Verify user can successfully log in with valid credentials.
 
 ## Prerequisites
+
 - Login page is accessible
 - Test user account exists
 
 ## Test Steps
-1. Navigate to login page
-2. Enter username "testuser@example.com"
-3. Enter password "password123"
-4. Click login button
-5. Wait for dashboard to appear
+
+- Navigate to login page
+- Enter username "testuser@example.com"
+- Enter password "password123"
+- Click login button
+- Wait for dashboard to appear
 
 ## Expected Results
+
 - User is redirected to dashboard
 - Welcome message is visible
 - Login form is no longer displayed
 
 ## Tags
+
 - smoke
 - authentication
 ```
@@ -41,26 +46,26 @@ Verify user can successfully log in with valid credentials.
 
 ```yaml
 project:
-  name: "basic-login"
-  base_url: "https://demo.example.com"
+  name: 'basic-login'
+  base_url: 'https://demo.example.com'
   timeout: 30000
 
 browser:
-  type: "chromium"
+  type: 'chromium'
   headless: true
   viewport:
     width: 1280
     height: 720
 
 authentication:
-  username: "${TEST_USERNAME}"
-  password: "${TEST_PASSWORD}"
-  login_url: "/login"
+  username: '${TEST_USERNAME}'
+  password: '${TEST_PASSWORD}'
+  login_url: '/login'
 
 test_data:
   valid_user:
-    email: "testuser@example.com"
-    password: "password123"
+    email: 'testuser@example.com'
+    password: 'password123'
 ```
 
 ### 1.2 Form Submission Test
@@ -71,23 +76,27 @@ test_data:
 # Contact Form Submission
 
 ## Description
+
 Test the contact form submission with valid data and verify confirmation.
 
 ## Test Steps
-1. Navigate to contact page "/contact"
-2. Fill in name field with "John Doe"
-3. Fill in email field with "john@example.com"
-4. Fill in subject field with "Test Message"
-5. Fill in message field with "This is a test message"
-6. Click submit button
-7. Wait for confirmation message
+
+- Navigate to contact page "/contact"
+- Fill in name field with "John Doe"
+- Fill in email field with "john@example.com"
+- Fill in subject field with "Test Message"
+- Fill in message field with "This is a test message"
+- Click submit button
+- Wait for confirmation message
 
 ## Expected Results
+
 - Success message "Thank you for your message" appears
 - Form fields are cleared
 - No error messages are displayed
 
 ## Tags
+
 - forms
 - contact
 ```
@@ -102,30 +111,34 @@ Test the contact form submission with valid data and verify confirmation.
 # Complete Purchase Flow
 
 ## Description
+
 End-to-end test for product purchase from search to confirmation.
 
 ## Prerequisites
+
 - User is logged in
 - Product inventory is available
 - Payment gateway is functional
 
 ## Test Steps
-1. Navigate to home page
-2. Search for product "Wireless Headphones"
-3. Click on first search result
-4. Select color "Black" from options
-5. Click "Add to Cart" button
-6. Click cart icon in header
-7. Verify product is in cart with correct details
-8. Click "Proceed to Checkout"
-9. Fill in shipping address using test data
-10. Select "Standard Shipping" option
-11. Fill in payment details using test card
-12. Review order summary
-13. Click "Complete Order" button
-14. Wait for order confirmation page
+
+- Navigate to home page
+- Search for product "Wireless Headphones"
+- Click on first search result
+- Select color "Black" from options
+- Click "Add to Cart" button
+- Click cart icon in header
+- Verify product is in cart with correct details
+- Click "Proceed to Checkout"
+- Fill in shipping address using test data
+- Select "Standard Shipping" option
+- Fill in payment details using test card
+- Review order summary
+- Click "Complete Order" button
+- Wait for order confirmation page
 
 ## Expected Results
+
 - Order confirmation page displays with order number
 - Email confirmation is sent
 - Product is removed from cart
@@ -133,12 +146,14 @@ End-to-end test for product purchase from search to confirmation.
 - Payment is processed successfully
 
 ## Test Data
+
 - Search term: "Wireless Headphones"
 - Color: "Black"
 - Shipping address: ${SHIPPING_ADDRESS}
 - Payment card: ${TEST_CARD}
 
 ## Tags
+
 - e2e
 - purchase
 - critical
@@ -148,59 +163,59 @@ End-to-end test for product purchase from search to confirmation.
 
 ```yaml
 project:
-  name: "ecommerce-tests"
-  description: "E-commerce platform testing"
-  base_url: "https://shop.example.com"
+  name: 'ecommerce-tests'
+  description: 'E-commerce platform testing'
+  base_url: 'https://shop.example.com'
   timeout: 60000
 
 browser:
-  type: "chromium"
+  type: 'chromium'
   headless: true
   viewport:
     width: 1920
     height: 1080
 
 authentication:
-  method: "form"
-  username: "${SHOP_USER_EMAIL}"
-  password: "${SHOP_USER_PASSWORD}"
-  login_url: "/account/login"
-  success_indicator: ".account-dashboard"
+  method: 'form'
+  username: '${SHOP_USER_EMAIL}'
+  password: '${SHOP_USER_PASSWORD}'
+  login_url: '/account/login'
+  success_indicator: '.account-dashboard'
 
 test_data:
   products:
     headphones:
-      name: "Wireless Headphones"
+      name: 'Wireless Headphones'
       price: 99.99
-      colors: ["Black", "White", "Blue"]
+      colors: ['Black', 'White', 'Blue']
     laptop:
-      name: "Gaming Laptop"
+      name: 'Gaming Laptop'
       price: 1299.99
-      specs: ["16GB RAM", "512GB SSD"]
+      specs: ['16GB RAM', '512GB SSD']
 
   shipping_addresses:
     default:
-      first_name: "John"
-      last_name: "Doe"
-      address_1: "123 Main Street"
-      city: "New York"
-      state: "NY"
-      postal_code: "10001"
-      country: "United States"
+      first_name: 'John'
+      last_name: 'Doe'
+      address_1: '123 Main Street'
+      city: 'New York'
+      state: 'NY'
+      postal_code: '10001'
+      country: 'United States'
 
   payment_cards:
     test_visa:
-      number: "4111111111111111"
-      expiry_month: "12"
-      expiry_year: "2025"
-      cvv: "123"
-      name: "John Doe"
+      number: '4111111111111111'
+      expiry_month: '12'
+      expiry_year: '2025'
+      cvv: '123'
+      name: 'John Doe'
 
 environments:
   staging:
-    base_url: "https://staging-shop.example.com"
+    base_url: 'https://staging-shop.example.com'
   production:
-    base_url: "https://shop.example.com"
+    base_url: 'https://shop.example.com'
 
 execution:
   retry_count: 2
@@ -215,9 +230,11 @@ execution:
 # Product Search and Filtering
 
 ## Description
+
 Test product search functionality and filtering options.
 
 ## Test Steps
+
 1. Navigate to products page
 2. Enter "laptop" in search box
 3. Press enter or click search button
@@ -232,6 +249,7 @@ Test product search functionality and filtering options.
 12. Verify results show only TechBrand laptops in price range
 
 ## Expected Results
+
 - Search returns relevant products
 - Price filter works correctly
 - Brand filter works correctly
@@ -239,6 +257,7 @@ Test product search functionality and filtering options.
 - "Clear filters" option is available
 
 ## Tags
+
 - search
 - filtering
 - products
@@ -254,13 +273,16 @@ Test product search functionality and filtering options.
 # Admin User Management
 
 ## Description
+
 Test admin functionality for managing user accounts.
 
 ## Prerequisites
+
 - Admin user is logged in
 - Test users exist in system
 
 ## Test Steps
+
 1. Navigate to admin dashboard
 2. Click on "User Management" section
 3. Verify user list displays
@@ -274,6 +296,7 @@ Test admin functionality for managing user accounts.
 11. Verify user role is updated to "Moderator"
 
 ## Expected Results
+
 - User search works correctly
 - User details load properly
 - Role change is successful
@@ -281,6 +304,7 @@ Test admin functionality for managing user accounts.
 - Audit log records the change
 
 ## Tags
+
 - admin
 - user-management
 - critical
@@ -294,9 +318,11 @@ Test admin functionality for managing user accounts.
 # Data Export Test
 
 ## Description
+
 Test the data export functionality from admin dashboard.
 
 ## Test Steps
+
 1. Navigate to admin dashboard
 2. Go to "Reports" section
 3. Select "User Activity Report"
@@ -309,6 +335,7 @@ Test the data export functionality from admin dashboard.
 10. Verify data format is correct
 
 ## Expected Results
+
 - Export generates successfully
 - File downloads without errors
 - CSV format is properly structured
@@ -316,6 +343,7 @@ Test the data export functionality from admin dashboard.
 - File name includes timestamp
 
 ## Tags
+
 - admin
 - export
 - reports
@@ -331,9 +359,11 @@ Test the data export functionality from admin dashboard.
 # Form with API Validation
 
 ## Description
+
 Test form that validates data against backend API.
 
 ## Test Steps
+
 1. Navigate to user registration form
 2. Fill in email field with existing email "existing@test.com"
 3. Fill in other required fields with valid data
@@ -346,12 +376,14 @@ Test form that validates data against backend API.
 10. Verify form submits successfully
 
 ## Expected Results
+
 - API validation prevents duplicate emails
 - Error messages are displayed clearly
 - Valid data submits successfully
 - Form provides immediate feedback
 
 ## Tags
+
 - forms
 - validation
 - api
@@ -367,13 +399,16 @@ Test form that validates data against backend API.
 # Mobile Navigation Test
 
 ## Description
+
 Test navigation functionality on mobile viewport.
 
 ## Prerequisites
+
 - Browser is set to mobile viewport
 - Site has responsive design
 
 ## Test Steps
+
 1. Navigate to home page
 2. Verify mobile viewport is active
 3. Look for hamburger menu button
@@ -385,6 +420,7 @@ Test navigation functionality on mobile viewport.
 9. Verify hamburger menu can be closed
 
 ## Expected Results
+
 - Hamburger menu is visible on mobile
 - Menu opens and closes smoothly
 - Navigation links work correctly
@@ -392,6 +428,7 @@ Test navigation functionality on mobile viewport.
 - Touch interactions work properly
 
 ## Tags
+
 - mobile
 - navigation
 - responsive
@@ -401,14 +438,14 @@ Test navigation functionality on mobile viewport.
 
 ```yaml
 browser:
-  type: "chromium"
+  type: 'chromium'
   headless: true
   viewport:
-    width: 375    # iPhone viewport
+    width: 375 # iPhone viewport
     height: 667
   device_emulation:
-    name: "iPhone 8"
-    user_agent: "Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X)"
+    name: 'iPhone 8'
+    user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X)'
 ```
 
 ## 6. Performance Testing Examples
@@ -421,9 +458,11 @@ browser:
 # Page Load Performance Test
 
 ## Description
+
 Test page load times and performance metrics.
 
 ## Test Steps
+
 1. Navigate to home page
 2. Measure page load time
 3. Verify page loads within 3 seconds
@@ -434,6 +473,7 @@ Test page load times and performance metrics.
 8. Verify interactive elements respond quickly
 
 ## Expected Results
+
 - Home page loads in under 3 seconds
 - Product page loads in under 5 seconds
 - No JavaScript console errors
@@ -441,11 +481,13 @@ Test page load times and performance metrics.
 - Page is interactive within 2 seconds
 
 ## Performance Thresholds
+
 - First Contentful Paint: < 1.5s
 - Largest Contentful Paint: < 2.5s
 - Time to Interactive: < 3.0s
 
 ## Tags
+
 - performance
 - load-time
 - metrics
@@ -461,9 +503,11 @@ Test page load times and performance metrics.
 # WCAG Accessibility Compliance
 
 ## Description
+
 Test website accessibility compliance with WCAG guidelines.
 
 ## Test Steps
+
 1. Navigate to home page
 2. Verify page has proper heading structure
 3. Test keyboard navigation through all interactive elements
@@ -475,6 +519,7 @@ Test website accessibility compliance with WCAG guidelines.
 9. Test with screen reader simulation
 
 ## Expected Results
+
 - Heading hierarchy is logical (h1 > h2 > h3)
 - All interactive elements are keyboard accessible
 - Color contrast meets WCAG AA standards
@@ -484,6 +529,7 @@ Test website accessibility compliance with WCAG guidelines.
 - Focus indicators are clearly visible
 
 ## Tags
+
 - accessibility
 - wcag
 - compliance
@@ -500,9 +546,11 @@ Test website accessibility compliance with WCAG guidelines.
 # Complete Account Registration
 
 ## Description
+
 Test the complete user registration and email verification flow.
 
 ## Test Steps
+
 1. Navigate to registration page
 2. Fill in personal information form
 3. Accept terms and conditions
@@ -515,6 +563,7 @@ Test the complete user registration and email verification flow.
 10. Complete profile setup
 
 ## Expected Results
+
 - Registration form validates properly
 - Account is created successfully
 - Verification email is sent
@@ -523,6 +572,7 @@ Test the complete user registration and email verification flow.
 - Profile setup is accessible
 
 ## Tags
+
 - registration
 - email-verification
 - workflow
@@ -539,9 +589,11 @@ Test the complete user registration and email verification flow.
 # Network Error Handling
 
 ## Description
+
 Test application behavior during network connectivity issues.
 
 ## Test Steps
+
 1. Navigate to product page
 2. Simulate network disconnection
 3. Try to add product to cart
@@ -552,6 +604,7 @@ Test application behavior during network connectivity issues.
 8. Test offline functionality if available
 
 ## Expected Results
+
 - Error messages are user-friendly
 - Application doesn't crash on network errors
 - Retry mechanisms work properly
@@ -559,6 +612,7 @@ Test application behavior during network connectivity issues.
 - Data is preserved during network issues
 
 ## Tags
+
 - error-handling
 - network
 - resilience
@@ -569,64 +623,41 @@ Test application behavior during network connectivity issues.
 ### Command Examples
 
 ```bash
-# Run a specific test
-my-cli-run --project "ecommerce-tests" --scenario "purchase-flow"
+# Run a specific test from a project
+ai-e2e-test run -p ecommerce -f purchase-flow
 
-# Run all tests in a project
-my-cli-run --project "ecommerce-tests"
+# Run a test in headed (visible) mode for debugging
+ai-e2e-test run -p mobile-responsive -f mobile-nav --no-headless
 
-# Run tests with specific browser
-my-cli-run --project "mobile-responsive" --browser "webkit" --headed
-
-# Run tests with custom config
-my-cli-run --project "api-integration" --config "./custom-config.yml"
-
-# Generate test from URL
-my-cli-generate --url "https://shop.example.com" --project-name "new-shop-tests"
-
-# Run tests in different environments
-my-cli-run --project "ecommerce-tests" --env "staging"
-```
-
-### Project Templates
-
-Create new projects based on templates:
-
-```bash
-# E-commerce template
-my-cli-generate --template "ecommerce" --project-name "my-shop-tests"
-
-# Admin dashboard template  
-my-cli-generate --template "admin" --project-name "admin-tests"
-
-# Mobile app template
-my-cli-generate --template "mobile" --project-name "mobile-tests"
-
-# API testing template
-my-cli-generate --template "api" --project-name "api-tests"
+# Generate a test from a description
+ai-e2e-test generate -i "Verify that the shopping cart updates correctly when an item is added"
 ```
 
 ## 11. Best Practices from Examples
 
 ### Test Organization
+
 - Group related tests in the same project
 - Use descriptive names for test files
 - Include appropriate tags for filtering
 - Maintain consistent file structure
 
 ### Data Management
+
 - Use environment variables for sensitive data
 - Create reusable test data sets
 - Separate test data by environment
 - Use meaningful variable names
 
 ### Maintenance
+
 - Regular updates to selectors and URLs
 - Keep test data current
 - Review and update expected results
 - Monitor for flaky tests
 
 ### Reporting
+
 - Include relevant tags for test categorization
 - Use descriptive test names and descriptions
 - Document prerequisites clearly

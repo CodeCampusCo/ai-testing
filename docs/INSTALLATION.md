@@ -3,6 +3,7 @@
 ## Prerequisites
 
 ### System Requirements
+
 - **Node.js**: v18.0.0 or higher
 - **npm**: v8.0.0 or higher (or yarn v1.22.0+)
 - **Operating System**: macOS, Linux, or Windows 10/11
@@ -10,17 +11,20 @@
 - **Storage**: 500MB free space
 
 ### Required Accounts
+
 - **AI Provider Account**: OpenAI, Anthropic, or Google AI (API key required)
 - **Optional**: Claude Desktop, VS Code with MCP extension for advanced features
 
 ## 1. Install Node.js
 
 ### Option A: Official Installer
+
 1. Visit [nodejs.org](https://nodejs.org/)
 2. Download the LTS version (v18+)
 3. Run the installer and follow the prompts
 
 ### Option B: Using nvm (Recommended)
+
 ```bash
 # Install nvm
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
@@ -32,6 +36,7 @@ nvm alias default 18
 ```
 
 ### Verify Installation
+
 ```bash
 node --version  # Should show v18.x.x or higher
 npm --version   # Should show v8.x.x or higher
@@ -40,6 +45,7 @@ npm --version   # Should show v8.x.x or higher
 ## 2. Install AI E2E Test Framework
 
 ### Global Installation (Recommended)
+
 ```bash
 # Install globally from npm (when published)
 npm install -g ai-e2e-test-framework
@@ -49,6 +55,7 @@ ai-e2e-test --version  # Should show v0.1.0-alpha
 ```
 
 ### Local Development Installation
+
 ```bash
 # Clone the repository
 git clone https://github.com/CodeCampusCo/ai-testing.git
@@ -67,77 +74,14 @@ node dist/cli/index.js --version
 npm link
 ```
 
-## 3. Configure AI Provider
+## 3. Configure MCP Server (if not already running)
 
-### Global Installation (Recommended)
-```bash
-npm install -g ai-e2e-test-framework
-```
+The framework requires a running Playwright MCP server to control the browser. If you are using an environment like Claude Desktop or the VS Code MCP extension that manages this for you, you can skip this step.
 
-### Verify Installation
-```bash
-my-cli-generate --version
-my-cli-run --version
-```
-
-## 3. Configure MCP Server
-
-### Option A: Claude Desktop
-1. Open Claude Desktop application
-2. Navigate to Settings → Developer
-3. Create or edit your MCP configuration file:
-
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-```json
-{
-  "mcpServers": {
-    "playwright": {
-      "command": "npx",
-      "args": ["@playwright/mcp@latest"]
-    }
-  }
-}
-```
-
-4. Restart Claude Desktop
-
-### Option B: VS Code with MCP Extension
-1. Install the MCP extension for VS Code
-2. Open VS Code settings (Ctrl/Cmd + ,)
-3. Search for "MCP"
-4. Add server configuration:
-
-```json
-{
-  "mcp.servers": {
-    "playwright": {
-      "command": "npx",
-      "args": ["@playwright/mcp@latest"]
-    }
-  }
-}
-```
-
-### Option C: Manual MCP Client Setup
-If using a custom MCP client:
+To run the server manually:
 
 ```bash
-# Create MCP config directory
-mkdir -p ~/.config/mcp
-
-# Create configuration file
-cat > ~/.config/mcp/config.json << EOF
-{
-  "mcpServers": {
-    "playwright": {
-      "command": "npx",
-      "args": ["@playwright/mcp@latest"]
-    }
-  }
-}
-EOF
+npx @playwright/mcp@latest
 ```
 
 ## 4. Configure AI Provider
@@ -150,6 +94,7 @@ EOF
    - **Google AI**: [ai.google.dev](https://ai.google.dev/)
 
 2. **Create .env file:**
+
 ```bash
 # Copy example file
 cp .env.example .env
@@ -161,6 +106,7 @@ AI_API_KEY=your-api-key-here
 ```
 
 3. **Provider-specific default models:**
+
 ```bash
 # OpenAI
 AI_PROVIDER=openai
@@ -176,6 +122,7 @@ AI_MODEL=gemini-pro  # default
 ```
 
 ### Option B: Environment Variables
+
 ```bash
 # Add to ~/.bashrc, ~/.zshrc, or ~/.profile
 export AI_PROVIDER=openai
@@ -186,6 +133,7 @@ export AI_API_KEY=your-openai-api-key-here
 ## 5. Optional Configuration
 
 ### Advanced Environment Variables
+
 ```bash
 # Logging configuration
 export LOG_LEVEL=info                    # debug | info | warn | error
@@ -204,6 +152,7 @@ export AI_REQUEST_TIMEOUT=30000          # AI request timeout (ms)
 ```
 
 ### Project-Specific .env File
+
 ```bash
 # Each project can have its own .env file
 cd your-project-directory
@@ -217,41 +166,19 @@ nano .env
 
 ## 6. Verify Installation
 
-### Run System Check
-```bash
-my-cli-generate --doctor
-```
-
-This command will verify:
-- ✅ Node.js version compatibility
-- ✅ Framework installation
-- ✅ MCP server connectivity
-- ✅ AI provider configuration
-- ✅ Required dependencies
-
 ### Test Basic Functionality
+
 ```bash
-# Create a test project
-mkdir test-installation
-cd test-installation
-
-# Initialize new project
-my-cli-generate --init --project-name "installation-test"
-
-# Verify project structure
-ls -la projects/installation-test/
+# From the root of the project, run a test
+ai-e2e-test run -p example-project -f login-test
 ```
 
-Expected output:
-```
-projects/installation-test/
-├── config.yml
-└── sample-test.md
-```
+A successful test run will be indicated by the test status in the console.
 
 ## 7. IDE Setup (Optional)
 
 ### VS Code Extensions
+
 Install recommended extensions for better development experience:
 
 ```bash
@@ -262,6 +189,7 @@ code --install-extension ms-vscode.vscode-json
 ```
 
 ### VS Code Settings
+
 Create `.vscode/settings.json` in your project:
 
 ```json
@@ -282,9 +210,11 @@ Create `.vscode/settings.json` in your project:
 ### Common Issues
 
 #### 1. MCP Server Connection Failed
+
 **Error**: `Cannot connect to MCP server`
 
 **Solution**:
+
 ```bash
 # Check if Playwright MCP is installed
 npx @playwright/mcp --version
@@ -297,9 +227,11 @@ cat ~/.config/mcp/config.json | jq .
 ```
 
 #### 2. AI Provider Authentication Failed
+
 **Error**: `No API key found` or `Authentication failed`
 
 **Solution**:
+
 ```bash
 # Check if .env file exists
 ls -la .env
@@ -314,9 +246,11 @@ cp .env.example .env
 ```
 
 #### 3. Permission Denied Errors
+
 **Error**: `EACCES: permission denied`
 
 **Solution**:
+
 ```bash
 # Fix npm permissions
 npm config set prefix ~/.npm-global
@@ -329,9 +263,11 @@ npm install -g ai-e2e-test-framework
 ```
 
 #### 4. Node.js Version Issues
+
 **Error**: `Unsupported Node.js version`
 
 **Solution**:
+
 ```bash
 # Check current version
 node --version
@@ -348,8 +284,8 @@ nvm use 18
 If you encounter issues not covered here:
 
 1. **Check Documentation**: Visit [docs/](../docs/) for detailed guides
-2. **Run Diagnostics**: Use `my-cli-generate --doctor` for system checks
-3. **Check Logs**: Review logs in `~/.ai-e2e-framework/logs/`
+2. **Enable Verbose Logging**: Use the `-v` or `--verbose` flag when running a command to get detailed debug output.
+3. **Check Logs**: Review the console output for error messages.
 4. **Community Support**: Visit our [GitHub Issues](https://github.com/your-org/ai-e2e-test-framework/issues)
 
 ### Support Information Collection
@@ -357,11 +293,7 @@ If you encounter issues not covered here:
 When reporting issues, include:
 
 ```bash
-# Generate system information
-my-cli-generate --system-info > system-info.txt
-
 # Include in your issue report:
-# - system-info.txt
 # - Error messages and stack traces
 # - Steps to reproduce
 # - Expected vs actual behavior
@@ -379,15 +311,17 @@ After successful installation:
 ## 10. Updating the Framework
 
 ### Check for Updates
+
 ```bash
 # Check current version
-my-cli-generate --version
+ai-e2e-test --version
 
 # Check for available updates
 npm outdated -g ai-e2e-test-framework
 ```
 
 ### Update to Latest Version
+
 ```bash
 # Update the framework
 npm update -g ai-e2e-test-framework
@@ -397,6 +331,7 @@ npm update -g @playwright/mcp
 ```
 
 ### Version Management
+
 ```bash
 # Install specific version
 npm install -g ai-e2e-test-framework@1.2.3

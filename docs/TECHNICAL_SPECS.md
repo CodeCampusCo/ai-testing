@@ -6,35 +6,57 @@
 
 ```mermaid
 graph TB
-    A[CLI Interface] --> B[Simple Workflow Engine]
-    B --> C[ScenarioGeneratorAgent]
-    B --> D[TestExecutorAgent] 
-    B --> E[AnalysisAgent]
-    
-    C --> F[Multi-Provider AI<br/>OpenAI | Anthropic | Google]
-    D --> G[Dynamic MCP Client]
-    E --> F
-    
-    G --> H[@playwright/mcp Server]
-    H --> I[Browser Engines<br/>Chrome | Firefox | Safari]
-    
-    J[Natural Language Input] --> B
-    K[Configuration] --> B
-    
-    B --> L[JSON Test Reports]
-    B --> M[Screenshots & Snapshots]
+    subgraph "User Interface"
+        A[CLI Interface]
+        J[Natural Language Input]
+        K[Configuration Files]
+    end
+
+    subgraph "Core Framework"
+        B[LangGraph Workflow]
+        F[LangChain AI Service]
+        G[Playwright MCP Client]
+    end
+
+    subgraph "AI Agents (Graph Nodes)"
+        C[ScenarioGeneratorAgent]
+        D[TestExecutorAgent]
+        E[AnalysisAgent]
+    end
+
+    subgraph "External Services"
+        H[@playwright/mcp Server]
+        I[Browser Engines<br/>Chrome | Firefox | Safari]
+        P[LLM Providers<br/>OpenAI | Anthropic | Google]
+    end
+
+    A & J & K --> B
+
+    B -- Manages State --> C
+    B -- Manages State --> D
+    B -- Manages State --> E
+
+    C -- Uses --> F
+    D -- Uses --> F
+    E -- Uses --> F
+    D -- Uses --> G
+
+    F --> P
+    G --> H
+    H --> I
 ```
 
 ### 1.2 Component Responsibilities
 
-| Component | Responsibility |
-|-----------|----------------|
-| **CLI Interface** | User interaction, command parsing, input validation |
-| **LangGraph.js Orchestrator** | Agent coordination, workflow management, state handling |
-| **Scenario Generation Agent** | Website analysis, test scenario creation, .md/.yml generation |
-| **Test Execution Agent** | Natural language to MCP command translation, test execution |
-| **Report Analysis Agent** | Test result processing, insight generation, recommendations |
-| **Playwright MCP Server** | Browser automation via accessibility snapshots |
+| Component                     | Responsibility                                                                                                                            |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **CLI Interface**             | User interaction, command parsing, and input validation.                                                                                  |
+| **LangGraph Workflow**        | The core orchestrator. Manages the state and control flow between agents using a graph-based structure.                                   |
+| **LangChain AI Service**      | A centralized, unified service for all interactions with LLM providers. Handles prompt templating and structured output parsing.          |
+| **Scenario Generation Agent** | An AI-driven node that converts a high-level test description into a structured `TestScenario` object.                                    |
+| **Test Execution Agent**      | A pure AI-driven orchestrator. For each natural language step, it uses the AI Service to generate and execute the necessary MCP commands. |
+| **Report Analysis Agent**     | An AI-driven node that analyzes the final `TestResult` to generate summaries, identify issues, and provide suggestions.                   |
+| **Playwright MCP Client**     | A client wrapper for communicating with the `@playwright/mcp` server for all browser automation tasks.                                    |
 
 ## 2. Technical Stack
 
@@ -69,6 +91,7 @@ graph TB
 ### 2.2 MCP Integration
 
 #### Server Configuration
+
 ```json
 {
   "mcpServers": {
@@ -81,20 +104,21 @@ graph TB
 ```
 
 #### Client Connection
+
 ```typescript
 import { MCPClient } from '@mcp/client';
 
 class PlaywrightMCPClient {
   private client: MCPClient;
-  
+
   async connect() {
     this.client = new MCPClient({
       serverCommand: 'npx',
-      serverArgs: ['@playwright/mcp@latest']
+      serverArgs: ['@playwright/mcp@latest'],
     });
     await this.client.connect();
   }
-  
+
   async executeCommand(command: string, params: object) {
     return await this.client.callTool(command, params);
   }
@@ -119,62 +143,29 @@ Test Files → Parsing → AI Translation → MCP Commands → Browser Actions �
    .md/.yml → AST → Natural Language → Playwright → Accessibility → Reports
 ```
 
-## 4. Agent Implementations
+## 4. Agent & Workflow Architecture
 
-### 4.1 Scenario Generation Agent
+The framework's core logic is built on a modular, AI-first architecture orchestrated by LangGraph.
 
-```typescript
-interface ScenarioGenerationAgent {
-  analyzeWebsite(url: string): Promise<WebsiteAnalysis>;
-  generateScenarios(analysis: WebsiteAnalysis): Promise<TestScenario[]>;
-  createTestFiles(scenarios: TestScenario[], config: ProjectConfig): Promise<void>;
-}
+### 4.1 LangGraph Workflow
 
-class ScenarioGenerationAgentImpl implements ScenarioGenerationAgent {
-  constructor(
-    private mcpClient: PlaywrightMCPClient,
-    private aiProvider: AIProvider
-  ) {}
-  
-  async analyzeWebsite(url: string): Promise<WebsiteAnalysis> {
-    const snapshot = await this.mcpClient.takeSnapshot(url);
-    const analysis = await this.aiProvider.analyze(
-      `Analyze this accessibility tree for testable elements: ${snapshot}`
-    );
-    return this.parseAnalysis(analysis);
-  }
-}
-```
+The `LangGraphWorkflow` class is the central orchestrator. It defines a stateful graph where each node is an agent. It manages the flow of data (`WorkflowState`) between nodes and handles conditional branching (e.g., skipping scenario generation if a file is provided, or ending execution on failure).
 
-### 4.2 Test Execution Agent
+### 4.2 AI Agent Unification
 
-```typescript
-interface TestExecutionAgent {
-  parseTestScenario(filePath: string): Promise<TestSteps[]>;
-  executeTest(steps: TestSteps[], config: ProjectConfig): Promise<TestResult>;
-  handleRetries(failedStep: TestStep, context: ExecutionContext): Promise<TestStep>;
-}
+All agents that require AI capabilities (like `ScenarioGeneratorAgent` and `AnalysisAgent`) extend a common `AIAgent` base class. This base class is now refactored to use a single, shared `LangChainAIService` instance, ensuring all AI interactions are consistent, stable, and managed centrally.
 
-class TestExecutionAgentImpl implements TestExecutionAgent {
-  async executeTest(steps: TestSteps[], config: ProjectConfig): Promise<TestResult> {
-    const browser = await this.mcpClient.launchBrowser(config.browser);
-    
-    for (const step of steps) {
-      try {
-        const mcpCommand = await this.translateToMCP(step);
-        await this.mcpClient.executeCommand(mcpCommand.command, mcpCommand.params);
-      } catch (error) {
-        const retryStep = await this.handleRetries(step, { browser, config });
-        if (retryStep) {
-          await this.executeStep(retryStep);
-        } else {
-          throw error;
-        }
-      }
-    }
-  }
-}
-```
+### 4.3 Pure AI-Driven Test Executor
+
+The `TestExecutorAgent` has been significantly refactored to embody a "Pure AI-First" approach.
+
+- It no longer contains rule-based logic (like `switch` statements) for different actions.
+- Its primary role is to loop through the natural language steps (`rawSteps`) of a test scenario.
+- For **each step**, it gets the current browser snapshot and calls the `LangChainAIService`.
+- The `LangChainAIService` is responsible for generating the correct sequence of one or more MCP tool calls required to perform the action described in the step. This includes intelligently adding `browser_wait_for` commands after actions that cause page navigation, which solves timing-related errors.
+- The `TestExecutorAgent` then simply executes the MCP commands returned by the AI service.
+
+This architecture makes the executor extremely flexible and powerful, as the intelligence for performing actions resides within the AI prompt rather than being hardcoded in the framework.
 
 ## 5. Configuration Management
 
@@ -194,7 +185,7 @@ const environmentSchema = z.object({
   AI_MODEL: z.string().optional(),
   AI_API_KEY: z.string(),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
-  MCP_CLIENT_CONFIG: z.string().optional()
+  MCP_CLIENT_CONFIG: z.string().optional(),
 });
 ```
 
@@ -205,21 +196,23 @@ const projectConfigSchema = z.object({
   project: z.object({
     name: z.string(),
     baseUrl: z.string().url(),
-    timeout: z.number().positive().default(30000)
+    timeout: z.number().positive().default(30000),
   }),
   browser: z.object({
     type: z.enum(['chromium', 'firefox', 'webkit']).default('chromium'),
     headless: z.boolean().default(true),
     viewport: z.object({
       width: z.number().positive().default(1280),
-      height: z.number().positive().default(720)
-    })
+      height: z.number().positive().default(720),
+    }),
   }),
-  authentication: z.object({
-    username: z.string().optional(),
-    password: z.string().optional(),
-    loginUrl: z.string().optional()
-  }).optional()
+  authentication: z
+    .object({
+      username: z.string().optional(),
+      password: z.string().optional(),
+      loginUrl: z.string().optional(),
+    })
+    .optional(),
 });
 ```
 
@@ -230,11 +223,11 @@ const projectConfigSchema = z.object({
 ```typescript
 enum ErrorCategory {
   CONFIGURATION = 'configuration',
-  NETWORK = 'network', 
+  NETWORK = 'network',
   AI_PROVIDER = 'ai_provider',
   MCP_SERVER = 'mcp_server',
   TEST_EXECUTION = 'test_execution',
-  VALIDATION = 'validation'
+  VALIDATION = 'validation',
 }
 
 interface FrameworkError {
@@ -251,26 +244,23 @@ interface FrameworkError {
 
 ```typescript
 class RetryManager {
-  async executeWithRetry<T>(
-    operation: () => Promise<T>,
-    options: RetryOptions
-  ): Promise<T> {
+  async executeWithRetry<T>(operation: () => Promise<T>, options: RetryOptions): Promise<T> {
     let lastError: Error;
-    
+
     for (let attempt = 1; attempt <= options.maxAttempts; attempt++) {
       try {
         return await operation();
       } catch (error) {
         lastError = error;
-        
+
         if (!this.isRetryable(error) || attempt === options.maxAttempts) {
           throw error;
         }
-        
+
         await this.delay(options.backoffMs * Math.pow(2, attempt - 1));
       }
     }
-    
+
     throw lastError;
   }
 }
@@ -283,22 +273,22 @@ class RetryManager {
 ```typescript
 class SnapshotCache {
   private cache = new Map<string, CachedSnapshot>();
-  
+
   async getSnapshot(url: string, options: SnapshotOptions): Promise<AccessibilitySnapshot> {
     const key = this.generateKey(url, options);
     const cached = this.cache.get(key);
-    
+
     if (cached && !this.isExpired(cached)) {
       return cached.snapshot;
     }
-    
+
     const snapshot = await this.mcpClient.takeSnapshot(url, options);
     this.cache.set(key, {
       snapshot,
       timestamp: Date.now(),
-      ttl: options.cacheTtl || 300000 // 5 minutes
+      ttl: options.cacheTtl || 300000, // 5 minutes
     });
-    
+
     return snapshot;
   }
 }
@@ -311,14 +301,14 @@ class TokenOptimizer {
   optimizePrompt(originalPrompt: string, context: PromptContext): string {
     // Remove redundant information
     const deduplicated = this.removeDuplicates(originalPrompt);
-    
+
     // Compress accessibility data
     const compressed = this.compressAccessibilityData(deduplicated, context);
-    
+
     // Apply context-aware truncation
     return this.truncateIntelligently(compressed, context.maxTokens);
   }
-  
+
   estimateTokenCost(prompt: string, model: string): number {
     const tokenCount = this.countTokens(prompt, model);
     return tokenCount * this.getModelPricing(model);
@@ -336,9 +326,9 @@ describe('ScenarioGenerationAgent', () => {
   it('should generate valid test scenarios from accessibility snapshot', async () => {
     const mockSnapshot = createMockSnapshot();
     const agent = new ScenarioGenerationAgentImpl(mockMcpClient, mockAI);
-    
+
     const scenarios = await agent.generateScenarios(mockSnapshot);
-    
+
     expect(scenarios).toHaveLength(3);
     expect(scenarios[0].steps).toBeDefined();
     expect(scenarios[0].assertions).toBeDefined();
@@ -355,10 +345,10 @@ describe('PlaywrightMCP Integration', () => {
     const client = new PlaywrightMCPClient();
     await expect(client.connect()).resolves.not.toThrow();
   });
-  
+
   it('should execute browser commands through MCP', async () => {
     const result = await client.executeCommand('click', {
-      selector: 'button[type="submit"]'
+      selector: 'button[type="submit"]',
     });
     expect(result.success).toBe(true);
   });
@@ -441,7 +431,7 @@ const logger = createLogger({
   ),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'framework.log' })
-  ]
+    new winston.transports.File({ filename: 'framework.log' }),
+  ],
 });
 ```

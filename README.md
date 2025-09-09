@@ -20,64 +20,75 @@ export AI_MODEL=gpt-4  # optional, uses provider defaults
 # Generate test scenario from natural language
 ai-e2e-test generate -i "Test login flow for my website"
 
-# Generate interactively 
+# Generate interactively
 ai-e2e-test generate --interactive
 
 # Run complete test workflow (generate + execute + analyze)
 ai-e2e-test run -i "Test Google search functionality"
 
-# Run from existing scenario file
-ai-e2e-test run -f ./my-test-scenario.json
+# Run a specific test file from a project
+ai-e2e-test run -p example-project -f login-test
 
-# Run with verbose debugging
-ai-e2e-test run -i "Test login" --verbose
+# Run with verbose debugging and headed mode
+ai-e2e-test run -p example-project -f login-test --verbose --no-headless
 ```
 
 ## ✨ Key Features
 
-- **🤖 AI-Powered**: Natural language → executable browser tests with 3 specialized agents
-- **⚡ Dynamic MCP Integration**: Runtime tool discovery with 21+ Playwright automation tools  
-- **🎯 Multi-Provider AI**: OpenAI, Anthropic, Google AI support with automatic failover
-- **📊 Intelligent Analysis**: AI-powered result analysis with actionable insights
-- **🛡️ Accessibility-First**: Built-in accessibility scoring and issue detection
-- **🚀 Production CLI**: Complete command suite with real-time step progress
-- **🎨 Visual Feedback**: Professional spinners, status icons (✅/❌), and duration tracking
-- **🔄 CI/CD Ready**: Headless execution with comprehensive JSON reporting
+- **🧠 LangGraph Orchestration**: A robust, stateful workflow engine manages the entire test lifecycle, providing superior control flow and error handling.
+- **🤖 AI-First Execution**: For each test step, the AI analyzes the current page state and generates the precise browser commands needed, enabling flexible and intelligent test execution.
+- **⚡ Dynamic MCP Integration**: Leverages the full power of Playwright through the MCP server for real-time browser automation.
+- **🎯 Multi-Provider AI**: Supports OpenAI, Anthropic, and Google models through a unified `LangChainAIService`.
+- **📊 Intelligent Analysis**: An AI agent analyzes test results to provide summaries, identify root causes, and suggest actionable improvements.
+- **🚀 Production CLI**: A complete command suite with real-time, step-by-step progress indicators.
 
 ## 🏗️ Architecture
 
 ```
-┌────────────────────┐
-│ Natural Language Input  │
-│ "Test login flow"       │
-└─────────┬──────────┘
-           │
-           ▼ AI Workflow (3 Agents)
-┌─────────┴──────────┐
-│ 🧠 ScenarioGenerator  │ ──▶ Structured Test Steps
-├────────────────────┤
-│ 🌐 TestExecutor       │ ──▶ Browser Automation
-├────────────────────┤     (via Dynamic MCP)
-│ 📊 AnalysisAgent     │ ──▶ AI Insights & Reports
-└────────────────────┘
-           │
-           ▼ Multi-Provider AI
-┌────────────────────┐
-│ OpenAI │ Anthropic │ Google │
-└────────────────────┘
+┌──────────────────────────┐
+│   Natural Language Input   │
+│ (CLI, .md files)         │
+└────────────┬─────────────┘
+             │
+             ▼
+┌──────────────────────────┐
+│ ⚙️  LangGraph Workflow     │
+│ (State Orchestrator)     │
+└────────────┬─────────────┘
+             │
+┌────────────┴─────────────┐
+│ nodes execute...         │
+│                          │
+│   🧠 ScenarioGenerator   │
+│   🌐 TestExecutor        │
+│   📊 AnalysisAgent       │
+│                          │
+└────────────┬─────────────┘
+             │
+             ▼
+┌──────────────────────────┐
+│ 🤖 LangChain AI Service    │
+└────────────┬─────────────┘
+             │
+ ┌───────────┴──────────┐
+ ▼                      ▼
+┌──────────────┐   ┌───────────────────┐
+│ LLM Providers│   │ Playwright MCP    │
+│(OpenAI, etc.)│   │ (Browser Control) │
+└──────────────┘   └───────────────────┘
 ```
 
 ## 📖 Documentation
 
-| Document | Description |
-|----------|-------------|
-| [📋 PRD](./docs/PRD.md) | Product Requirements Document |
-| [🔧 Technical Specs](./docs/TECHNICAL_SPECS.md) | Architecture & Implementation |
-| [🔌 API Reference](./docs/API_REFERENCE.md) | MCP Integration & Agent APIs |
-| [📄 File Formats](./docs/FILE_FORMATS.md) | Test scenario & config formats |
-| [⚙️ Installation](./docs/INSTALLATION.md) | Setup & Configuration guide |
-| [💡 Examples](./docs/EXAMPLES.md) | Sample projects & templates |
-| [🛣️ Roadmap](./docs/ROADMAP.md) | Future features & timeline |
+| Document                                        | Description                    |
+| ----------------------------------------------- | ------------------------------ |
+| [📋 PRD](./docs/PRD.md)                         | Product Requirements Document  |
+| [🔧 Technical Specs](./docs/TECHNICAL_SPECS.md) | Architecture & Implementation  |
+| [🔌 API Reference](./docs/API_REFERENCE.md)     | MCP Integration & Agent APIs   |
+| [📄 File Formats](./docs/FILE_FORMATS.md)       | Test scenario & config formats |
+| [⚙️ Installation](./docs/INSTALLATION.md)       | Setup & Configuration guide    |
+| [💡 Examples](./docs/EXAMPLES.md)               | Sample projects & templates    |
+| [🛣️ Roadmap](./docs/ROADMAP.md)                 | Future features & timeline     |
 
 ## 🎯 Use Cases
 
