@@ -8,23 +8,13 @@ This document provides a high-level overview of the primary components and APIs 
 
 The framework is operated through the `ai-e2e-test` command-line interface.
 
-### 1.1 `ai-e2e-test generate`
-
-**Alias:** `g`
-
-Generates a structured test scenario from a natural language description.
-
-- **Input:** A text description (`-i`) or a file path (`-f`).
-- **Output:** A JSON `TestScenario` file (`-o`).
-- **Key Options:** `--interactive` for guided input, `--provider` and `--model` to specify the AI, `-v` for verbose logging.
-
-### 1.2 `ai-e2e-test run`
+### 1.1 `ai-e2e-test run`
 
 **Alias:** `r`
 
-Executes a test workflow. It can either generate a scenario from a description first or run an existing test file from a project.
+Executes a test workflow from an existing test file from a project.
 
-- **Input:** A text description (`-i`) or a project (`-p`) and test file (`-f`).
+- **Input:** A project (`-p`) and test file (`-f`).
 - **Output:** A JSON result file in the specified output directory (`-o`).
 - **Key Options:** `--no-headless` to watch the browser, `--no-clean-state` to preserve browser sessions, `-v` for verbose logging.
 
@@ -46,19 +36,13 @@ A client responsible for managing the `@playwright/mcp` server process and sendi
 
 The agents are the "brains" of the framework, each performing a specialized task as a node within the `LangGraphWorkflow`.
 
-### 3.1 `ScenarioGeneratorAgent`
-
-- **Input:** A natural language description of a test.
-- **Process:** Uses the `LangChainAIService` to convert the description into a structured `TestScenario` object, including metadata, steps, and expected outcomes.
-- **Output:** A `TestScenario` object.
-
-### 3.2 `TestExecutorAgent`
+### 3.1 `TestExecutorAgent`
 
 - **Input:** A `TestScenario` object, specifically the `rawSteps` and `rawOutcomes`.
 - **Process:** Implements the "Pure AI-First" execution model. For each natural language step, it captures the current state of the web page (via an accessibility snapshot) and asks the `LangChainAIService` to generate the appropriate MCP browser commands. It then executes these commands.
 - **Output:** A `TestResult` object containing the status of each step, duration, screenshots, and other execution data.
 
-### 3.3 `AnalysisAgent`
+### 3.2 `AnalysisAgent`
 
 - **Input:** A `TestScenario` and the corresponding `TestResult`.
 - **Process:** Uses the `LangChainAIService` to analyze the test results, providing a summary, a list of issues, and actionable suggestions.

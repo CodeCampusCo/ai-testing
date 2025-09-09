@@ -628,9 +628,6 @@ ai-e2e-test run -p ecommerce -f purchase-flow
 
 # Run a test in headed (visible) mode for debugging
 ai-e2e-test run -p mobile-responsive -f mobile-nav --no-headless
-
-# Generate a test from a description
-ai-e2e-test generate -i "Verify that the shopping cart updates correctly when an item is added"
 ```
 
 ## 11. Best Practices from Examples

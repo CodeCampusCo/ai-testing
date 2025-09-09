@@ -36,7 +36,6 @@ This roadmap outlines the planned development phases for the AI-Powered E2E Test
 #### ✅ AI Agent System
 
 - [x] LangGraph.js orchestrator setup
-- [x] Basic scenario generation agent
 - [x] Pure AI-First test execution agent
 - [x] OpenAI GPT-4 integration
 
@@ -44,19 +43,16 @@ This roadmap outlines the planned development phases for the AI-Powered E2E Test
 
 - [x] Markdown test scenario parser
 - [x] YAML configuration reader
-- [x] File generation system
 - [x] Project structure management
 
 #### ✅ Basic Commands
 
-- [x] `ai-e2e-test generate` command
 - [x] `ai-e2e-test run` with full workflow execution
 - [x] JSON report generation
 - [x] AI-powered error analysis and reporting
 
 ### Success Criteria
 
-- Can generate simple test scenarios from website analysis
 - Can execute basic tests (navigation, clicking, form filling)
 - Produces readable test reports
 - Works with major browsers (Chromium, Firefox, WebKit)
@@ -70,14 +66,6 @@ This roadmap outlines the planned development phases for the AI-Powered E2E Test
 **Version**: 1.1.0
 
 ### Enhanced AI Capabilities
-
-#### 🎯 Advanced Scenario Generation
-
-- [ ] Multi-page website analysis
-- [ ] E-commerce flow detection
-- [ ] Form validation scenario generation
-- [ ] Mobile-responsive test creation
-- [ ] Authentication flow detection
 
 #### 🎯 Improved Test Execution
 
@@ -307,7 +295,6 @@ This roadmap outlines the planned development phases for the AI-Powered E2E Test
 ### Quality Metrics
 
 - **Target**: 99.9% uptime for cloud services
-- **Target**: <500ms average test generation time
 - **Target**: 90%+ customer satisfaction score
 - **Target**: <24h critical issue resolution time
 
@@ -315,8 +302,6 @@ This roadmap outlines the planned development phases for the AI-Powered E2E Test
 
 - **Target**: 95%+ test success rate
 - **Target**: 50%+ reduction in test maintenance effort
-- **Target**: 3x faster test creation vs. traditional methods
-- **Target**: 80%+ test scenario accuracy from AI generation
 
 ---
 

@@ -24,11 +24,10 @@ Overall, the project now stands on a solid, consistent, and extensible architect
 
 ## 2. Project Goal and Architecture Summary
 
-- **Goal:** To create an E2E testing tool that dramatically reduces test creation time by using an AI to translate natural language test steps into automated browser actions.
+- **Goal:** To create an E2E testing tool that uses an AI to translate natural language test steps from markdown files into automated browser actions.
 - **Architecture:** The system is a Node.js CLI application. It now uses a `LangGraphWorkflow` orchestrator to manage a stateful graph of AI agents:
-  1.  **`ScenarioGeneratorAgent`:** Converts a high-level description into a structured `TestScenario`.
-  2.  **`TestExecutorAgent`:** The core of the system. It takes individual test steps (in plain English) and, using the live accessibility snapshot of the web page as context, asks a unified `LangChainAIService` to generate the precise browser commands to execute.
-  3.  **`AnalysisAgent`:** Reviews the test results to provide insights beyond a simple pass/fail status.
+  1.  **`TestExecutorAgent`:** The core of the system. It takes individual test steps (in plain English) and, using the live accessibility snapshot of the web page as context, asks a unified `LangChainAIService` to generate the precise browser commands to execute.
+  2.  **`AnalysisAgent`:** Reviews the test results to provide insights beyond a simple pass/fail status.
 - **Key Technology:** The innovative feature is the real-time use of an LLM as a reasoning engine during the test execution loop, using the accessibility tree as its "eyes" to interact with the web page.
 
 ---
@@ -39,8 +38,7 @@ The project was evaluated against the acceptance criteria defined in `PRD.md`.
 
 **MVP Status: COMPLETE**
 
-- ✅ CLI tool with `generate`/`run` commands: **Implemented.**
-- ✅ AI-powered test scenario generation: **Implemented**, though it does not analyze the website to _suggest_ tests as the docs imply. It generates a scenario from a user-provided description.
+- ✅ CLI tool with `run` command: **Implemented.** The `generate` command was removed to streamline the tool's focus.
 - ✅ Natural language to test command conversion: **Implemented.** This is the core strength of the `TestExecutorAgent`.
 - ✅ Playwright MCP integration: **Implemented** via the `PlaywrightMCPClient`.
 - ✅ Basic reporting with pass/fail status: **Implemented.**
@@ -60,11 +58,10 @@ The project was evaluated against the acceptance criteria defined in `PRD.md`.
 
 The initial review found several critical inconsistencies. These have been addressed in a major refactoring effort.
 
-| Documented Feature                  | Status & Resolution -                                                                                                                                                                                                                     |
-| :---------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **LangGraph.js Orchestrator**       | ✅ **RESOLVED.** The `SimpleTestWorkflow` has been replaced with a new, robust `LangGraphWorkflow`. The documentation in `TECHNICAL_SPECS.md` has been updated to reflect this correct architecture. -                                    |
-| **ScenarioGenerator Analyzes Site** | ⚪ **OUTSTANDING.** This remains a feature discrepancy. The agent generates scenarios from descriptions, not by analyzing a live site. The documentation should be kept as is, but this should be considered for future implementation. - |
-| **LangChain for all AI**            | ✅ **RESOLVED.** A major refactoring was completed to unify all AI interactions. All agents now use a single, shared `LangChainAIService` instance, resolving the inconsistency and fixing a critical hanging bug. -                      |
+| Documented Feature            | Status & Resolution -                                                                                                                                                                                                |
+| :---------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **LangGraph.js Orchestrator** | ✅ **RESOLVED.** The `SimpleTestWorkflow` has been replaced with a new, robust `LangGraphWorkflow`. The documentation in `TECHNICAL_SPECS.md` has been updated to reflect this correct architecture. -               |
+| **LangChain for all AI**      | ✅ **RESOLVED.** A major refactoring was completed to unify all AI interactions. All agents now use a single, shared `LangChainAIService` instance, resolving the inconsistency and fixing a critical hanging bug. - |
 
 ---
 
@@ -88,7 +85,7 @@ This section details the findings from the code review and test execution, categ
 
 2.  **Increase Unit Test Coverage**
     - **Finding:** The project lacks unit tests for the core logic within the AI agents and services.
-    - **Analysis:** There are no tests to validate the prompt construction in `LangChainAIService` or the data normalization in `ScenarioGeneratorAgent`. This makes the system fragile.
+    - **Analysis:** There are no tests to validate the prompt construction in `LangChainAIService`. This makes the system fragile.
     - **Recommendation:** Add unit tests for all agents, focusing on their `process` methods. Mock the AI and MCP client dependencies to test the agent's logic in isolation.
 
 3.  **Address Application Performance Issues**
